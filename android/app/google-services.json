@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "853305782122",
+    "project_id": "everesports-c2dfe",
+    "storage_bucket": "everesports-c2dfe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:853305782122:android:19eb125ffbea97dc16bf13",
+        "android_client_info": {
+          "package_name": "com.example.everesports_fire_beta"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAbUjNp-cQoYiBmXkwfCkogGR9jrRV8XIw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,156 @@
+name: everesports
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+  cupertino_icons: ^1.0.8
+  mongo_dart: ^0.10.5
+  shared_preferences: ^2.2.2
+  provider: ^6.0.5
+  file_picker: ^8.0.0+1
+  image_picker: ^0.8.7+3
+  photo_view: ^0.15.0
+  path_provider: ^2.1.2
+  crop_your_image: ^2.0.0
+  icons_plus: ^5.0.0
+  http: ^1.2.1
+  http_parser: ^4.0.2
+  video_player: ^2.8.1
+  flick_video_player: ^0.9.0
+  visibility_detector: ^0.4.0+2
+  share_plus: ^7.2.1
+  image: ^4.1.3
+  image_watermark: ^0.1.0
+  dropdown_search: ^5.0.6
+  ffi: ^2.1.4
+  flutter_launcher_icons: ^0.14.4
+  rename: ^2.1.1
+  flutter_animate: ^4.5.2
+  cloud_firestore: ^6.0.1
+  firebase_core: ^4.1.0
+  flutter_local_notifications: ^19.4.2
+  awesome_video_player: ^1.0.5
+  octo_image: ^2.1.0
+  flutter_cache_manager: ^3.4.1
+
+  
+flutter_launcher_icons:
+  ios: true
+  image_path: "assets/logo/ic_launcher.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  web:
+    generate: true
+    image_path: "assets/logo/ic_launcher.png"
+  windows:
+    generate: true
+    image_path: "assets/logo/ic_launcher.png"
+    icon_size: 48 # min:48, max:256, default: 48
+  macos:
+    generate: true
+    image_path: "assets/logo/ic_launcher.png"
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter_gen:
+  synthetic-package: false
+
+flutter:
+  generate: true  # Enables localization
+
+  uses-material-design: true
+
+  assets:
+    - assets/image/
+    - assets/icons/home.png
+    - assets/icons/search.png
+    - assets/icons/notification.png
+    - assets/icons/game_controller.png
+    - assets/icons/
+    - assets/icons/search_selected.png
+    - assets/icons/notification_selected.png
+    - assets/icons/game_controller_selected.png
+    - assets/icons/sharing.png
+    - assets/icons/favorite.png
+    - assets/icons/comment.png
+    - assets/icons/bookmark.png
+    - assets/icons/favorited.png
+    - assets/icons/bookmarked.png
+    - assets/icons/add_games.png
+    - assets/icons/add_games_selected.png
+    - assets/icons/performance.png
+    - assets/icons/performance_selected.png
+    - assets/icons/spark.png
+    - assets/icons/spark_selected.png
+    - assets/logo/ic_launcher.png
+    - assets/images/
+    - assets/images/Standard.png
+    - assets/images/Premium.png
+    - assets/images/Ultimate.png
+    - assets/icons/cristol.png
+    - assets/image/1111111111.png
+    - assets/icons/profile_users.jpeg
+    - assets/image/banner.jpg
+    - assets/image/1753111386429.jpg
+
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Black.ttf
+        - asset: assets/fonts/Poppins-BlackItalic.ttf
+          style: italic
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Poppins-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Poppins-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Poppins-ExtraBoldItalic.ttf
+          weight: 800
+          style: italic
+        - asset: assets/fonts/Poppins-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/Poppins-ExtraLightItalic.ttf
+          weight: 200
+          style: italic
+        - asset: assets/fonts/Poppins-Italic.ttf
+          style: italic
+        - asset: assets/fonts/Poppins-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Poppins-LightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/Poppins-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Poppins-MediumItalic.ttf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Poppins-SemiBoldItalic.ttf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/Poppins-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/Poppins-ThinItalic.ttf
+          weight: 100
+          style: italic
+    - family: LemonJelly
+      fonts:
+        - asset: assets/fonts/LemonJellyPersonalUse-dEqR.ttf
