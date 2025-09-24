@@ -1,33 +1,8 @@
-import 'package:mongo_dart/mongo_dart.dart';
-import 'package:everesports/database/config/config.dart';
 import 'package:everesports/core/page/home/model/comment.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CommentService {
-  static Db? _db;
-  static DbCollection? _commentsCollection;
-  static DbCollection? _likesCollection;
-  static DbCollection? _notificationsCollection;
-
-  static Future<void> _initializeDatabase() async {
-    if (_db == null) {
-      try {
-        _db = await Db.create(configDatabase);
-        await _db!.open();
-        _commentsCollection = _db!.collection('comments');
-      } catch (e) {
-        print('Error connecting to database: $e');
-        rethrow;
-      }
-    }
-  }
-
-  static Future<void> _initializeLikeDatabase() async {
-    if (_db == null) {
-      await _initializeDatabase();
-    }
-    _likesCollection ??= _db!.collection('comments_like');
-    _notificationsCollection ??= _db!.collection('notifications');
-  }
+  static final FirebaseFirestore _fs = FirebaseFirestore.instance;
 
   // Add a comment to a post
   static Future<Comment?> addComment(
@@ -37,82 +12,99 @@ class CommentService {
     String? parentId,
   ]) async {
     try {
-      await _initializeDatabase();
-      _notificationsCollection ??= _db!.collection('notifications');
-
-      final commentData = {
-        '_id': ObjectId(),
+      final data = {
         'userId': userId,
         'postId': postId,
         'content': content,
-        'createdAt': DateTime.now().toIso8601String(),
-        'updatedAt': DateTime.now().toIso8601String(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'view': false,
         if (parentId != null) 'parentId': parentId,
       };
+      final doc = await _fs.collection('comments').add(data);
+      final createdAt = DateTime.now();
 
-      final commentObjectId = commentData['_id'];
-      await _commentsCollection!.insert(commentData);
+      // Insert notification for post owner in 'notification_comments'
+      try {
+        String ownerId = '';
+        Map<String, dynamic>? postData;
+        final postDoc = await _fs.collection('posts').doc(postId).get();
+        if (postDoc.exists) {
+          postData = postDoc.data();
+        } else {
+          // Fallback if postId isn't a doc id: try querying by a field named 'postId'
+          final alt = await _fs
+              .collection('posts')
+              .where('postId', isEqualTo: postId)
+              .limit(1)
+              .get();
+          if (alt.docs.isNotEmpty) {
+            postData = alt.docs.first.data();
+          }
+        }
+        ownerId = postData != null
+            ? (postData['userId']?.toString() ?? '')
+            : '';
 
-      // Mention notification logic
-      final mentionRegExp = RegExp(r'@(\w+)');
-      final matches = mentionRegExp.allMatches(content);
-      if (_db != null) {
-        DbCollection? usersCollection = _db!.collection('users');
+        if (ownerId.isNotEmpty && ownerId != userId) {
+          await _fs.collection('notification_comments').add({
+            'type': 'comment',
+            'userId': ownerId, // notification recipient (post owner)
+            'postId': postId,
+            'commentId': doc.id,
+            'byUserId': userId, // commenter
+            'content': content,
+            'createdAt': FieldValue.serverTimestamp(),
+            'read': false,
+            'view': false,
+          });
+        }
+
+        // Mention notification logic
+        final mentionRegExp = RegExp(r'@(\w+)');
+        final matches = mentionRegExp.allMatches(content);
         for (final match in matches) {
           final username = match.group(1);
-          if (username != null &&
-              usersCollection != null &&
-              _notificationsCollection != null) {
-            final mentionedUser = await usersCollection.findOne({
-              'username': username,
-            });
-            print('Mentioned user for @$username: $mentionedUser');
-            String? mentionedUserId;
-            if (mentionedUser != null && mentionedUser['_id'] != null) {
-              if (mentionedUser['_id'] is ObjectId) {
-                mentionedUserId = mentionedUser['_id'].toHexString();
-              } else {
-                mentionedUserId = mentionedUser['_id'].toString();
-              }
-            }
-            String? commentId;
-            if (commentObjectId != null && commentObjectId is ObjectId) {
-              commentId = commentObjectId.toHexString();
-            } else if (commentObjectId != null) {
-              commentId = commentObjectId.toString();
-            }
-            print(
-              'Mention notification: mentionedUserId=$mentionedUserId, userId=$userId, commentId=$commentId',
-            );
-            if (mentionedUserId != null &&
-                mentionedUserId != userId &&
-                commentId != null) {
-              final notificationDoc = {
-                'userId': mentionedUserId,
-                'type': 'mention',
-                'commentId': commentId,
-                'postId': postId,
-                'byUserId': userId,
-                'createdAt': DateTime.now().toIso8601String(),
-                'read': false,
-              };
-              print('addComment: inserting notification: $notificationDoc');
-              try {
-                await _notificationsCollection!.insert(notificationDoc);
-                print(
-                  'addComment: Notification inserted for user: $mentionedUserId',
-                );
-              } catch (e) {
-                print('addComment: Error inserting notification: $e');
+          if (username != null) {
+            // Find user by username
+            final userQuery = await _fs
+                .collection('users')
+                .where('username', isEqualTo: username)
+                .limit(1)
+                .get();
+            if (userQuery.docs.isNotEmpty) {
+              final mentionedUser = userQuery.docs.first;
+              final mentionedUserId = mentionedUser.id;
+              if (mentionedUserId != userId) {
+                await _fs.collection('notification_comments').add({
+                  'type': 'mention',
+                  'userId': mentionedUserId,
+                  'commentId': doc.id,
+                  'postId': postId,
+                  'byUserId': userId,
+                  'content': content,
+                  'createdAt': FieldValue.serverTimestamp(),
+                  'read': false,
+                  'view': false,
+                });
               }
             }
           }
         }
+      } catch (e) {
+        print('Firestore addComment notification error: $e');
       }
-
-      return Comment.fromMap(commentData);
+      return Comment(
+        id: doc.id,
+        userId: userId,
+        postId: postId,
+        content: content,
+        createdAt: createdAt,
+        updatedAt: createdAt,
+        parentId: parentId,
+      );
     } catch (e) {
-      print('Error adding comment: $e');
+      print('Firestore addComment error: $e');
       return null;
     }
   }
@@ -120,20 +112,32 @@ class CommentService {
   // Get comments for a post
   static Future<List<Comment>> getCommentsForPost(String postId) async {
     try {
-      await _initializeDatabase();
-
-      final cursor = await _commentsCollection!.find(
-        where.eq('postId', postId).sortBy('createdAt', descending: false),
-      );
-
-      final List<Comment> comments = [];
-      await for (final document in cursor) {
-        comments.add(Comment.fromMap(document));
-      }
-
-      return comments;
+      final q = await _fs
+          .collection('comments')
+          .where('postId', isEqualTo: postId)
+          .get();
+      final list = q.docs.map((d) {
+        final m = d.data();
+        final tsCreated = m['createdAt'];
+        final tsUpdated = m['updatedAt'];
+        return Comment(
+          id: d.id,
+          userId: (m['userId'] ?? '').toString(),
+          postId: (m['postId'] ?? '').toString(),
+          content: (m['content'] ?? '').toString(),
+          createdAt: tsCreated is Timestamp
+              ? tsCreated.toDate()
+              : DateTime.now(),
+          updatedAt: tsUpdated is Timestamp
+              ? tsUpdated.toDate()
+              : DateTime.now(),
+          parentId: (m['parentId'] as String?),
+        );
+      }).toList();
+      list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      return list;
     } catch (e) {
-      print('Error getting comments for post: $e');
+      print('Firestore getCommentsForPost error: $e');
       return [];
     }
   }
@@ -141,15 +145,13 @@ class CommentService {
   // Get comment count for a post
   static Future<int> getCommentCount(String postId) async {
     try {
-      await _initializeDatabase();
-
-      final count = await _commentsCollection!.count(
-        where.eq('postId', postId),
-      );
-
-      return count;
+      final q = await _fs
+          .collection('comments')
+          .where('postId', isEqualTo: postId)
+          .get();
+      return q.docs.length;
     } catch (e) {
-      print('Error getting comment count: $e');
+      print('Firestore getCommentCount error: $e');
       return 0;
     }
   }
@@ -157,193 +159,145 @@ class CommentService {
   // Update a comment
   static Future<bool> updateComment(String commentId, String newContent) async {
     try {
-      await _initializeDatabase();
-
-      print(
-        'Attempting to update comment: id=$commentId, newContent=$newContent',
-      );
-
-      // Handle both string and ObjectId formats
-      ObjectId objectId;
-      try {
-        objectId = ObjectId.fromHexString(commentId);
-        print('Successfully parsed ObjectId: $objectId');
-      } catch (e) {
-        print('Error parsing ObjectId from hex string: $e');
-        // If it's already an ObjectId string, try to parse it differently
-        try {
-          objectId = ObjectId.parse(commentId);
-          print('Successfully parsed ObjectId using parse: $objectId');
-        } catch (parseError) {
-          print('Error parsing ObjectId using parse: $parseError');
-          return false;
-        }
-      }
-
-      final result = await _commentsCollection!.update(
-        where.eq('_id', objectId),
-        modify
-            .set('content', newContent)
-            .set('updatedAt', DateTime.now().toIso8601String()),
-      );
-
-      print('Update result: $result');
-
+      await _fs.collection('comments').doc(commentId).update({
+        'content': newContent,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
       return true;
     } catch (e) {
-      print('Error updating comment: $e');
+      print('Firestore updateComment error: $e');
       return false;
     }
   }
 
-  // Delete a comment
+  // Delete a comment and its replies
   static Future<bool> deleteComment(String commentId, String userId) async {
     try {
-      await _initializeDatabase();
-
-      print('Attempting to delete comment: id=$commentId, userId=$userId');
-
-      // Handle both string and ObjectId formats
-      ObjectId objectId;
-      try {
-        objectId = ObjectId.fromHexString(commentId);
-        print('Successfully parsed ObjectId: $objectId');
-      } catch (e) {
-        print('Error parsing ObjectId from hex string: $e');
-        // If it's already an ObjectId string, try to parse it differently
-        try {
-          objectId = ObjectId.parse(commentId);
-          print('Successfully parsed ObjectId using parse: $objectId');
-        } catch (parseError) {
-          print('Error parsing ObjectId using parse: $parseError');
-          return false;
-        }
+      await _fs.collection('comments').doc(commentId).delete();
+      // delete replies (shallow)
+      final replies = await _fs
+          .collection('comments')
+          .where('parentId', isEqualTo: commentId)
+          .get();
+      for (final d in replies.docs) {
+        await d.reference.delete();
       }
-
-      final result = await _commentsCollection!.deleteOne(
-        where.eq('_id', objectId).eq('userId', userId),
-      );
-
-      print('Delete result: $result');
-
-      // Recursively delete all replies
-      await _deleteRepliesRecursively(commentId);
-
       return true;
     } catch (e) {
-      print('Error deleting comment: $e');
+      print('Firestore deleteComment error: $e');
       return false;
-    }
-  }
-
-  static Future<void> _deleteRepliesRecursively(String parentId) async {
-    final replies = await _commentsCollection!
-        .find(where.eq('parentId', parentId))
-        .toList();
-    for (final reply in replies) {
-      final replyId = reply['_id']?.toHexString() ?? '';
-      if (replyId.isNotEmpty) {
-        await _commentsCollection!.deleteOne(where.eq('_id', reply['_id']));
-        await _deleteRepliesRecursively(replyId);
-      }
     }
   }
 
   // Get comments by user
   static Future<List<Comment>> getCommentsByUser(String userId) async {
     try {
-      await _initializeDatabase();
-
-      final cursor = await _commentsCollection!.find(
-        where.eq('userId', userId).sortBy('createdAt', descending: true),
-      );
-
-      final List<Comment> comments = [];
-      await for (final document in cursor) {
-        comments.add(Comment.fromMap(document));
-      }
-
-      return comments;
+      final q = await _fs
+          .collection('comments')
+          .where('userId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .get();
+      final list = q.docs.map((d) {
+        final m = d.data();
+        final tsCreated = m['createdAt'];
+        final tsUpdated = m['updatedAt'];
+        return Comment(
+          id: d.id,
+          userId: (m['userId'] ?? '').toString(),
+          postId: (m['postId'] ?? '').toString(),
+          content: (m['content'] ?? '').toString(),
+          createdAt: tsCreated is Timestamp
+              ? tsCreated.toDate()
+              : DateTime.now(),
+          updatedAt: tsUpdated is Timestamp
+              ? tsUpdated.toDate()
+              : DateTime.now(),
+          parentId: (m['parentId'] as String?),
+        );
+      }).toList();
+      return list;
     } catch (e) {
-      print('Error getting comments by user: $e');
+      print('Firestore getCommentsByUser error: $e');
       return [];
     }
   }
 
-  // --- COMMENT LIKE SYSTEM ---
+  // --- COMMENT LIKE SYSTEM (Firestore) ---
   static Future<bool> likeComment(String userId, String commentId) async {
-    await _initializeLikeDatabase();
-    _notificationsCollection ??= _db!.collection('notifications');
-    // Check if already liked
-    final existing = await _likesCollection!.findOne({
-      'userId': userId,
-      'commentId': commentId,
-    });
-    if (existing != null) return false;
-    // Add like
-    await _likesCollection!.insert({
-      'userId': userId,
-      'commentId': commentId,
-      'createdAt': DateTime.now().toIso8601String(),
-    });
-    // Get comment to find author
-    final comment = await _commentsCollection!.findOne({
-      '_id': ObjectId.parse(commentId),
-    });
-    String? commentAuthorId;
-    if (comment != null && comment['userId'] != null) {
-      if (comment['userId'] is ObjectId) {
-        commentAuthorId = comment['userId'].toHexString();
-      } else {
-        commentAuthorId = comment['userId'].toString();
-      }
-    }
-    print(
-      'likeComment: comment=$comment, commentAuthorId=$commentAuthorId, liker userId=$userId',
-    );
-    if (commentAuthorId != null && commentAuthorId != userId) {
-      final notificationDoc = {
-        'userId': commentAuthorId,
-        'type': 'comment_like',
+    try {
+      final docId = '${userId}_${commentId}';
+      final ref = _fs.collection('comments_like').doc(docId);
+      final exists = await ref.get();
+      if (exists.exists) return false;
+      await ref.set({
+        'userId': userId,
         'commentId': commentId,
-        'byUserId': userId,
-        'createdAt': DateTime.now().toIso8601String(),
-        'read': false,
-      };
-      print('likeComment: inserting notification: $notificationDoc');
-      try {
-        await _notificationsCollection!.insert(notificationDoc);
-        print('likeComment: Notification inserted for user: $commentAuthorId');
-      } catch (e) {
-        print('likeComment: Error inserting notification: $e');
+        'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // Get comment to find author
+      final commentDoc = await _fs.collection('comments').doc(commentId).get();
+      String? commentAuthorId;
+      if (commentDoc.exists) {
+        final data = commentDoc.data();
+        if (data != null && data['userId'] != null) {
+          commentAuthorId = data['userId'].toString();
+        }
       }
+      if (commentAuthorId != null && commentAuthorId != userId) {
+        await _fs.collection('notification_comments').add({
+          'type': 'comment_like',
+          'userId': commentAuthorId,
+          'commentId': commentId,
+          'byUserId': userId,
+          'createdAt': FieldValue.serverTimestamp(),
+          'read': false,
+          'view': false,
+        });
+      }
+
+      return true;
+    } catch (e) {
+      print('Firestore likeComment error: $e');
+      return false;
     }
-    return true;
   }
 
   static Future<bool> unlikeComment(String userId, String commentId) async {
-    await _initializeLikeDatabase();
-    final result = await _likesCollection!.remove({
-      'userId': userId,
-      'commentId': commentId,
-    });
-    return result['n'] > 0;
+    try {
+      final docId = '${userId}_${commentId}';
+      await _fs.collection('comments_like').doc(docId).delete();
+      return true;
+    } catch (e) {
+      print('Firestore unlikeComment error: $e');
+      return false;
+    }
   }
 
   static Future<int> getCommentLikeCount(String commentId) async {
-    await _initializeLikeDatabase();
-    return await _likesCollection!.count({'commentId': commentId});
+    try {
+      final q = await _fs
+          .collection('comments_like')
+          .where('commentId', isEqualTo: commentId)
+          .get();
+      return q.docs.length;
+    } catch (e) {
+      print('Firestore getCommentLikeCount error: $e');
+      return 0;
+    }
   }
 
   static Future<bool> isCommentLikedByUser(
     String userId,
     String commentId,
   ) async {
-    await _initializeLikeDatabase();
-    final like = await _likesCollection!.findOne({
-      'userId': userId,
-      'commentId': commentId,
-    });
-    return like != null;
+    try {
+      final docId = '${userId}_${commentId}';
+      final snap = await _fs.collection('comments_like').doc(docId).get();
+      return snap.exists;
+    } catch (e) {
+      print('Firestore isCommentLikedByUser error: $e');
+      return false;
+    }
   }
 }

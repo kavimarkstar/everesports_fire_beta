@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 Widget buildSparkSkeleton() {
   return Card(
@@ -10,37 +11,100 @@ Widget buildSparkSkeleton() {
         children: [
           Row(
             children: [
-              const CircleAvatar(radius: 20, backgroundColor: Colors.grey),
+              CircleAvatar(
+                backgroundColor: Colors.transparent,
+                radius: 20,
+                child: Animate(
+                  onPlay: (controller) => controller.repeat(), // loop shimmer
+                  effects: [ShimmerEffect(duration: 2000.ms)],
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(200),
+                      color: const Color.fromARGB(255, 158, 158, 158),
+                    ),
+                    alignment: Alignment.center,
+                  ),
+                ),
+              ),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(width: 100, height: 16, color: Colors.grey[300]),
                   const SizedBox(height: 4),
-                  Container(width: 60, height: 12, color: Colors.grey[300]),
+                  Container(
+                    width: 60,
+                    height: 12,
+                    child: Animate(
+                      onPlay: (controller) =>
+                          controller.repeat(), // loop shimmer
+                      effects: [ShimmerEffect(duration: 2000.ms)],
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          color: const Color.fromARGB(255, 158, 158, 158),
+                        ),
+                        alignment: Alignment.center,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 16),
-          Container(
+          SizedBox(
             width: double.infinity,
             height: 20,
-            color: Colors.grey[300],
+            child: Animate(
+              onPlay: (controller) => controller.repeat(), // loop shimmer
+              effects: [ShimmerEffect(duration: 2000.ms)],
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: const Color.fromARGB(255, 158, 158, 158),
+                ),
+                alignment: Alignment.center,
+              ),
+            ),
           ),
           const SizedBox(height: 8),
-          Container(
+          SizedBox(
             width: double.infinity,
             height: 60,
-            color: Colors.grey[300],
+
+            child: Animate(
+              onPlay: (controller) => controller.repeat(), // loop shimmer
+              effects: [ShimmerEffect(duration: 2000.ms)],
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: const Color.fromARGB(255, 158, 158, 158),
+                ),
+                alignment: Alignment.center,
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(
-              4,
-              (index) =>
-                  Container(width: 40, height: 24, color: Colors.grey[300]),
+              3,
+              (index) => Container(
+                width: 40,
+                height: 24,
+                child: Animate(
+                  onPlay: (controller) => controller.repeat(), // loop shimmer
+                  effects: [ShimmerEffect(duration: 2000.ms)],
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      color: const Color.fromARGB(255, 158, 158, 158),
+                    ),
+                    alignment: Alignment.center,
+                  ),
+                ),
+              ),
             ),
           ),
         ],

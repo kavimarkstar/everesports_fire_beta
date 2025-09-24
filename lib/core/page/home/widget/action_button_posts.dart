@@ -27,12 +27,18 @@ Widget postActionButton(
           icon,
           height: 30,
           color: isLiked
-              ? null
+              ? mainColor
               : (isDarkMode ? mainWhiteColor : mainBlackColor),
         ),
       ),
       const SizedBox(width: 5),
-      Text(label),
+      Text(
+        label,
+        style: TextStyle(
+          color: (isDarkMode ? mainWhiteColor : mainBlackColor),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       const SizedBox(width: 2),
     ],
   );

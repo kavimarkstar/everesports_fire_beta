@@ -1,25 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:everesports/core/page/setting/page/kyc/model/kyc_request.dart';
-import 'package:everesports/database/config/config.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
 
 class KycService {
   static const String _collectionName = 'kyc_requests';
   static const String _countriesCollectionName = 'countrys';
 
-  /// Submit a KYC request to the database
+  /// Submit a KYC request to Firestore
   static Future<bool> submitKycRequest(KycRequest request) async {
     try {
-      final db = await mongo.Db.create(configDatabase);
-      await db.open();
-      final collection = db.collection(_collectionName);
-
-      await collection.insertOne(request.toMap());
-      await db.close();
+      final collection = FirebaseFirestore.instance.collection(_collectionName);
+      await collection.doc(request.userId).set(request.toMap());
       return true;
     } catch (e) {
       throw Exception('Failed to submit KYC request: $e');
@@ -29,15 +22,13 @@ class KycService {
   /// Get KYC request by user ID
   static Future<KycRequest?> getKycRequestByUserId(String userId) async {
     try {
-      final db = await mongo.Db.create(configDatabase);
-      await db.open();
-      final collection = db.collection(_collectionName);
+      final doc = await FirebaseFirestore.instance
+          .collection(_collectionName)
+          .doc(userId)
+          .get();
 
-      final doc = await collection.findOne({'userId': userId});
-      await db.close();
-
-      if (doc == null) return null;
-      return KycRequest.fromMap(doc);
+      if (!doc.exists) return null;
+      return KycRequest.fromMap(doc.data()!);
     } catch (e) {
       throw Exception('Failed to fetch KYC request: $e');
     }
@@ -46,15 +37,14 @@ class KycService {
   /// Get all KYC requests with optional status filter
   static Future<List<KycRequest>> getKycRequests({String? status}) async {
     try {
-      final db = await mongo.Db.create(configDatabase);
-      await db.open();
-      final collection = db.collection(_collectionName);
-
-      final query = status != null ? {'status': status} : <String, dynamic>{};
-      final docs = await collection.find(query).toList();
-      await db.close();
-
-      return docs.map((doc) => KycRequest.fromMap(doc)).toList();
+      Query query = FirebaseFirestore.instance.collection(_collectionName);
+      if (status != null) {
+        query = query.where('status', isEqualTo: status);
+      }
+      final querySnapshot = await query.get();
+      return querySnapshot.docs
+          .map((doc) => KycRequest.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       throw Exception('Failed to fetch KYC requests: $e');
     }
@@ -66,69 +56,60 @@ class KycService {
     KycStatus status,
   ) async {
     try {
-      final db = await mongo.Db.create(configDatabase);
-      await db.open();
-      final collection = db.collection(_collectionName);
+      final docRef = FirebaseFirestore.instance
+          .collection(_collectionName)
+          .doc(requestId);
 
-      final result = await collection.updateOne(
-        {'_id': mongo.ObjectId.fromHexString(requestId)},
-        {
-          r'$set': {
-            'status': status.toString(),
-            'updatedAt': DateTime.now().toUtc().toIso8601String(),
-          },
-        },
-      );
+      await docRef.update({
+        'status': status.toString(),
+        'updatedAt': DateTime.now().toUtc().toIso8601String(),
+      });
 
-      await db.close();
-      return result.isSuccess;
+      return true;
     } catch (e) {
       throw Exception('Failed to update KYC status: $e');
     }
   }
 
-  /// Upload a file to the server
-  static Future<String> uploadFile(File file, String userId) async {
+  /// Convert image file to base64 string for database storage
+  static Future<String> fileToBase64String(File file) async {
     try {
-      final uri = Uri.parse('$fileServerBaseUrl/upload-kyc');
-      final request = http.MultipartRequest('POST', uri);
-
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          file.path,
-          contentType: MediaType('application', 'octet-stream'),
-        ),
-      );
-      request.fields['userId'] = userId;
-
-      final response = await request.send();
-      final body = await response.stream.bytesToString();
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(body);
-        final filePath = decoded['filePath'] as String?;
-        if (filePath != null) return filePath;
-      }
-
-      throw Exception('File upload failed (${response.statusCode})');
+      final bytes = await file.readAsBytes();
+      return base64Encode(bytes);
     } catch (e) {
-      throw Exception('Failed to upload file: $e');
+      throw Exception('Failed to convert file to base64: $e');
     }
   }
 
-  /// Get list of countries from database
+  /// Store image as base64 string in Firestore under user's KYC request
+  static Future<bool> storeImageAsBase64InKycRequest({
+    required String userId,
+    required String fieldName,
+    required File file,
+  }) async {
+    try {
+      final base64String = await fileToBase64String(file);
+      final docRef = FirebaseFirestore.instance
+          .collection(_collectionName)
+          .doc(userId);
+
+      await docRef.set({fieldName: base64String}, SetOptions(merge: true));
+      return true;
+    } catch (e) {
+      throw Exception('Failed to store image as base64: $e');
+    }
+  }
+
+  /// Get list of countries from Firestore
   static Future<List<String>> getCountries() async {
     try {
-      final db = await mongo.Db.create(configDatabase);
-      await db.open();
-      final collection = db.collection(_countriesCollectionName);
-
-      final docs = await collection.find().toList();
-      await db.close();
+      final collection = FirebaseFirestore.instance.collection(
+        _countriesCollectionName,
+      );
+      final querySnapshot = await collection.get();
 
       final countries =
-          docs
+          querySnapshot.docs
               .map((e) => (e['name'] ?? e['country'] ?? '').toString().trim())
               .where((e) => e.isNotEmpty)
               .toSet()
@@ -165,16 +146,11 @@ class KycService {
   /// Delete KYC request (admin function)
   static Future<bool> deleteKycRequest(String requestId) async {
     try {
-      final db = await mongo.Db.create(configDatabase);
-      await db.open();
-      final collection = db.collection(_collectionName);
-
-      final result = await collection.deleteOne({
-        '_id': mongo.ObjectId.fromHexString(requestId),
-      });
-
-      await db.close();
-      return result.isSuccess;
+      await FirebaseFirestore.instance
+          .collection(_collectionName)
+          .doc(requestId)
+          .delete();
+      return true;
     } catch (e) {
       throw Exception('Failed to delete KYC request: $e');
     }

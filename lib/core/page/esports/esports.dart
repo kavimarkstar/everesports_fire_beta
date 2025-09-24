@@ -1,5 +1,6 @@
 import 'package:everesports/Theme/colors.dart';
 import 'package:everesports/core/page/esports/model/tournament.dart';
+
 import 'package:everesports/core/page/esports/service/mongo_service.dart';
 import 'package:everesports/core/page/esports/widget/gridview.dart';
 import 'package:everesports/core/page/esports/widget/image_slider.dart';
@@ -10,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:io' show Platform;
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EsportsPage extends StatefulWidget {
   const EsportsPage({super.key});
@@ -37,17 +38,17 @@ class _EsportsPageState extends State<EsportsPage> {
   @override
   void initState() {
     super.initState();
-    _tournamentsFuture = MongoEsportsService.getTournaments();
-    _bannersFuture = MongoEsportsService.getBanners();
+    _tournamentsFuture = FirebaseEsportsService.getTournaments();
+    _bannersFuture = FirebaseEsportsService.getBanners();
     _fetchGames();
   }
 
   Future<void> _fetchGames() async {
-    final db = await mongo.Db.create(configDatabase);
-    await db.open();
-    final coll = db.collection('game_name');
-    final games = await coll.find().toList();
-    await db.close();
+    // Fetch game names from Firestore
+    final gamesSnapshot = await FirebaseFirestore.instance
+        .collection('game_name')
+        .get();
+    final games = gamesSnapshot.docs.map((doc) => doc.data()).toList();
     setState(() {
       _gameNameToData = {
         for (final g in games) (g['name'] ?? '').toString().toUpperCase(): g,
@@ -90,7 +91,8 @@ class _EsportsPageState extends State<EsportsPage> {
                     final imageUrls = snapshot.data!
                         .map(
                           (b) => b['imagePath'] != null
-                              ? baseUrl + "/" + b['imagePath']
+                              // ignore: prefer_interpolation_to_compose_strings
+                              ? "$baseUrl/" + b['imagePath']
                               : null,
                         )
                         .whereType<String>()
@@ -305,6 +307,7 @@ class _EsportsPageState extends State<EsportsPage> {
                             (t) =>
                                 t.gameName.toUpperCase() ==
                                     selectedFilter.toUpperCase() ||
+                                // ignore: unnecessary_null_comparison
                                 (t.subGameMode != null &&
                                     t.subGameMode.toUpperCase() ==
                                         selectedFilter.toUpperCase()),

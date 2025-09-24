@@ -1,10 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:everesports/Theme/colors.dart';
 import 'package:everesports/core/page/esports/model/tournament.dart';
 import 'package:everesports/core/page/search/widget/gridview.dart';
-import 'package:everesports/database/config/config.dart';
 import 'package:everesports/widget/common_profile_listview.dart';
 import 'package:flutter/material.dart';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
 
 class SearchResultsView extends StatefulWidget {
   final Map<String, dynamic>? searchResults;
@@ -43,16 +42,22 @@ class _SearchResultsViewState extends State<SearchResultsView>
   }
 
   Future<void> _fetchGames() async {
-    final db = await mongo.Db.create(configDatabase);
-    await db.open();
-    final coll = db.collection('game_name');
-    final games = await coll.find().toList();
-    await db.close();
-    setState(() {
-      _gameNameToData = {
-        for (final g in games) (g['name'] ?? '').toString().toUpperCase(): g,
-      };
-    });
+    // Fetch game_name collection from Firestore
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('game_name')
+          .get();
+      setState(() {
+        _gameNameToData = {
+          for (final doc in snapshot.docs)
+            (doc.data()['name'] ?? '').toString().toUpperCase(): doc.data(),
+        };
+      });
+    } catch (e) {
+      setState(() {
+        _gameNameToData = {};
+      });
+    }
   }
 
   @override
@@ -172,12 +177,12 @@ class _SearchResultsViewState extends State<SearchResultsView>
 
   Future<List<Tournament>> _fetchAllTournaments() async {
     try {
-      final db = await mongo.Db.create(configDatabase);
-      await db.open();
-      final collection = db.collection('Tournament');
-      final tournamentsRaw = await collection.find({}).toList();
-      await db.close();
-      return tournamentsRaw.map((e) => Tournament.fromMap(e)).toList();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('Tournament')
+          .get();
+      return snapshot.docs
+          .map((doc) => Tournament.fromMap(doc.data()))
+          .toList();
     } catch (e) {
       print('Error fetching all tournaments: $e');
       return [];
@@ -186,12 +191,10 @@ class _SearchResultsViewState extends State<SearchResultsView>
 
   Future<List<Map<String, dynamic>>> _fetchAllUsers() async {
     try {
-      final db = await mongo.Db.create(configDatabase);
-      await db.open();
-      final collection = db.collection('users');
-      final usersRaw = await collection.find({}).toList();
-      await db.close();
-      return usersRaw.map((e) => e).toList();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .get();
+      return snapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
       print('Error fetching all users: $e');
       return [];

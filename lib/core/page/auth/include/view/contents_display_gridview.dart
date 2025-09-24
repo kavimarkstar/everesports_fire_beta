@@ -1,8 +1,7 @@
 import 'package:everesports/Theme/colors.dart';
-import 'package:everesports/database/config/config.dart';
 import 'package:everesports/widget/common_elevated_button.dart';
 import 'package:flutter/material.dart';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ContentsDisplayGridviewUser extends StatefulWidget {
   final String userId;
@@ -36,12 +35,15 @@ class _ContentsDisplayGridviewUserState
   }
 
   Future<List<Map<String, dynamic>>> fetchPosts() async {
-    final db = await mongo.Db.create(configDatabase);
-    await db.open();
-    final collection = db.collection('posts');
-    final posts = await collection.find({'userId': widget.userId}).toList();
-    await db.close();
-    return posts;
+    final query = await FirebaseFirestore.instance
+        .collection('posts')
+        .where('userId', isEqualTo: widget.userId)
+        .get();
+    return query.docs.map((doc) {
+      final data = doc.data();
+      data['id'] = doc.id;
+      return data;
+    }).toList();
   }
 
   @override
@@ -120,7 +122,7 @@ class _ContentsDisplayGridviewUserState
                       ? Image.network(
                           imageUrl.startsWith('http')
                               ? imageUrl
-                              : '$fileServerBaseUrl/$imageUrl',
+                              : imageUrl, // No fileServerBaseUrl for Firebase
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
                               const Center(child: Icon(Icons.broken_image)),
@@ -142,11 +144,10 @@ class PostDetailPage extends StatelessWidget {
   const PostDetailPage({super.key, required this.post, required this.imageUrl});
 
   Future<void> _deletePost(BuildContext context) async {
-    final db = await mongo.Db.create(configDatabase);
-    await db.open();
-    final collection = db.collection('posts');
-    await collection.deleteOne({'_id': post['_id']});
-    await db.close();
+    await FirebaseFirestore.instance
+        .collection('posts')
+        .doc(post['id'])
+        .delete();
     if (context.mounted) Navigator.pop(context);
   }
 
@@ -225,7 +226,7 @@ class PostDetailPage extends StatelessWidget {
                   ? Image.network(
                       imageUrl!.startsWith('http')
                           ? imageUrl!
-                          : '$fileServerBaseUrl/$imageUrl',
+                          : imageUrl!, // No fileServerBaseUrl for Firebase
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) =>
                           const Center(
@@ -289,19 +290,13 @@ class _EditPostPageState extends State<EditPostPage> {
 
   Future<void> _save() async {
     setState(() => _isSaving = true);
-    final db = await mongo.Db.create(configDatabase);
-    await db.open();
-    final collection = db.collection('posts');
-    await collection.updateOne(
-      {'_id': widget.post['_id']},
-      {
-        r'$set': {
+    await FirebaseFirestore.instance
+        .collection('posts')
+        .doc(widget.post['id'])
+        .update({
           'title': _titleController.text.trim(),
           'description': _descController.text.trim(),
-        },
-      },
-    );
-    await db.close();
+        });
     setState(() => _isSaving = false);
     if (!mounted) return;
     Navigator.pop(context, true);

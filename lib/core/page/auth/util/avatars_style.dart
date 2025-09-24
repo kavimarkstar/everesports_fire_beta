@@ -2,7 +2,6 @@ import 'package:everesports/core/page/auth/include/profile_footer.dart';
 import 'package:everesports/database/config/config.dart';
 import 'package:everesports/responsive/responsive.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 Widget AvatarStandardbuild(
   BuildContext context,
@@ -11,7 +10,6 @@ Widget AvatarStandardbuild(
   int followingCount,
   int likeCount,
 ) {
-  final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
   final size = MediaQuery.of(context).size;
   final width = size.width;
   // Responsive values
@@ -27,7 +25,6 @@ Widget AvatarStandardbuild(
       : 150;
   double avatarImgHeight = avatarRadius * 2;
   double cardPadding = width < 600 ? 15 : 32;
-  double maxCardWidth = width >= 900 ? double.infinity : 600;
 
   return Container(
     height: isMobile(context)
@@ -138,7 +135,6 @@ Widget AvatarPremiumbuild(
   int followingCount,
   int likeCount,
 ) {
-  final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
   final size = MediaQuery.of(context).size;
   final width = size.width;
   // Responsive values
@@ -154,7 +150,6 @@ Widget AvatarPremiumbuild(
       : 150;
   double avatarImgHeight = avatarRadius * 2;
   double cardPadding = width < 600 ? 15 : 32;
-  double maxCardWidth = width >= 900 ? double.infinity : 600;
   return Container(
     height: isMobile(context)
         ? 600
@@ -254,7 +249,6 @@ Widget AvatarUltimatebuild(
   int followingCount,
   int likeCount,
 ) {
-  final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
   final size = MediaQuery.of(context).size;
   final width = size.width;
   // Responsive values
@@ -270,7 +264,6 @@ Widget AvatarUltimatebuild(
       : 150;
   double avatarImgHeight = avatarRadius * 2;
   double cardPadding = width < 600 ? 15 : 32;
-  double maxCardWidth = width >= 900 ? double.infinity : 600;
   return Container(
     height: isMobile(context)
         ? 600

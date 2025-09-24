@@ -1,43 +1,47 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart'; // <-- Add this import
+import 'package:http_parser/http_parser.dart';
 
 class ProfileService {
-  final String connectionString;
   final String serverBaseUrl;
 
-  mongo.Db? _db;
-  mongo.DbCollection? _usersCollection;
+  ProfileService({required this.serverBaseUrl});
 
-  ProfileService({required this.connectionString, required this.serverBaseUrl});
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final CollectionReference _usersCollection = _firestore.collection(
+    'users',
+  );
 
-  Future<void> openDb() async {
-    _db = await mongo.Db.create(connectionString);
-    await _db!.open();
-    _usersCollection = _db!.collection("users");
-  }
-
-  Future<void> closeDb() async {
-    await _db?.close();
-  }
-
+  /// Fetch user by Firestore document id or by userId field
   Future<Map<String, dynamic>?> fetchUserById(String id) async {
     try {
-      await openDb();
-      final user = id.length == 24
-          ? await _usersCollection!.findOne(
-              mongo.where.id(mongo.ObjectId.fromHexString(id)),
-            )
-          : await _usersCollection!.findOne(mongo.where.eq('userId', id));
-      await closeDb();
-      return user;
+      // Try to get by document id
+      DocumentSnapshot? doc;
+      if (id.length == 20 || id.length == 28 || id.length == 36) {
+        // Firestore auto id lengths (not 24 like Mongo)
+        doc = await _usersCollection.doc(id).get();
+        if (doc.exists) {
+          return doc.data() as Map<String, dynamic>;
+        }
+      }
+      // Fallback: try by userId field
+      final query = await _usersCollection
+          .where('userId', isEqualTo: id)
+          .limit(1)
+          .get();
+      if (query.docs.isNotEmpty) {
+        return query.docs.first.data() as Map<String, dynamic>;
+      }
+      return null;
     } catch (e) {
       rethrow;
     }
   }
 
+  /// Update user profile in Firestore
   Future<bool> updateUserProfile({
     required String id,
     required String name,
@@ -48,27 +52,39 @@ class ProfileService {
     String? coverImageUrl,
   }) async {
     try {
-      await openDb();
-      final selector = id.length == 24
-          ? mongo.where.id(mongo.ObjectId.fromHexString(id))
-          : mongo.where.eq('userId', id);
-      final result = await _usersCollection!.updateOne(
-        selector,
-        mongo.modify
-          ..set('name', name)
-          ..set('username', username)
-          ..set('birthday', birthday)
-          ..set('password', password)
-          ..set('profileImageUrl', profileImageUrl ?? '')
-          ..set('coverImageUrl', coverImageUrl ?? ''),
-      );
-      await closeDb();
-      return result.isSuccess;
+      // Try to update by document id
+      DocumentReference? docRef;
+      if (id.length == 20 || id.length == 28 || id.length == 36) {
+        docRef = _usersCollection.doc(id);
+        final doc = await docRef.get();
+        if (!doc.exists) {
+          docRef = null;
+        }
+      }
+      // Fallback: update by userId field
+      if (docRef == null) {
+        final query = await _usersCollection
+            .where('userId', isEqualTo: id)
+            .limit(1)
+            .get();
+        if (query.docs.isEmpty) return false;
+        docRef = query.docs.first.reference;
+      }
+      await docRef.update({
+        'name': name,
+        'username': username,
+        'birthday': birthday,
+        'password': password,
+        'profileImageUrl': profileImageUrl ?? '',
+        'coverImageUrl': coverImageUrl ?? '',
+      });
+      return true;
     } catch (e) {
       rethrow;
     }
   }
 
+  /// Upload image to server (for profile/cover image)
   Future<String?> uploadImage({
     required String endpoint,
     required String filePath,
@@ -102,6 +118,7 @@ class ProfileService {
     }
   }
 
+  /// Delete image from server
   Future<bool> deleteImage({
     required String endpoint,
     required String imagePath,
@@ -123,6 +140,7 @@ class ProfileService {
     }
   }
 
+  /// Upload image from bytes (for profile/cover image)
   Future<String?> uploadImageFromBytes({
     required String endpoint,
     required Uint8List bytes,

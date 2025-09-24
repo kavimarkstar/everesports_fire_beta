@@ -141,20 +141,19 @@ class _VerifieAccountPageRefactoredState
     setState(() => _submitting = true);
     try {
       // Upload files
-      final idDocFrontPath = await KycService.uploadFile(
+      final idDocFrontPath = await KycService.fileToBase64String(
         _idDocumentFrontFile!,
-        _userId!,
       );
       String? idDocBackPath;
       if (_idDocumentBackFile != null) {
-        idDocBackPath = await KycService.uploadFile(
+        idDocBackPath = await KycService.fileToBase64String(
           _idDocumentBackFile!,
-          _userId!,
         );
+      } else {
+        idDocBackPath = null;
       }
-      final addrProofPath = await KycService.uploadFile(
+      final addrProofPath = await KycService.fileToBase64String(
         _addressProofFile!,
-        _userId!,
       );
 
       // Create KYC request

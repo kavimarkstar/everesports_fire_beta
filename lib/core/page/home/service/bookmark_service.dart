@@ -1,25 +1,15 @@
-import 'package:mongo_dart/mongo_dart.dart';
-import 'package:everesports/database/config/config.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BookmarkService {
-  static Db? _db;
-  static DbCollection? _bookmarkCollection;
-
-  static Future<void> _initializeDatabase() async {
-    if (_db == null) {
-      _db = await Db.create(configDatabase);
-      await _db!.open();
-      _bookmarkCollection = _db!.collection('bookmark');
-    }
-  }
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static const String _collectionName = 'bookmark';
 
   static Future<void> addBookmark(
     String userId,
     String postId,
     String albumId,
   ) async {
-    await _initializeDatabase();
-    await _bookmarkCollection!.insertOne({
+    await _firestore.collection(_collectionName).add({
       'userId': userId,
       'postId': postId,
       'albumId': albumId,
@@ -32,12 +22,16 @@ class BookmarkService {
     String postId,
     String albumId,
   ) async {
-    await _initializeDatabase();
-    await _bookmarkCollection!.deleteOne({
-      'userId': userId,
-      'postId': postId,
-      'albumId': albumId,
-    });
+    final query = await _firestore
+        .collection(_collectionName)
+        .where('userId', isEqualTo: userId)
+        .where('postId', isEqualTo: postId)
+        .where('albumId', isEqualTo: albumId)
+        .get();
+
+    for (final doc in query.docs) {
+      await doc.reference.delete();
+    }
   }
 
   static Future<bool> isBookmarked(
@@ -45,29 +39,35 @@ class BookmarkService {
     String postId,
     String albumId,
   ) async {
-    await _initializeDatabase();
-    final doc = await _bookmarkCollection!.findOne({
-      'userId': userId,
-      'postId': postId,
-      'albumId': albumId,
-    });
-    return doc != null;
+    final query = await _firestore
+        .collection(_collectionName)
+        .where('userId', isEqualTo: userId)
+        .where('postId', isEqualTo: postId)
+        .where('albumId', isEqualTo: albumId)
+        .limit(1)
+        .get();
+
+    return query.docs.isNotEmpty;
   }
 
   static Future<int> getBookmarkCount(String postId) async {
-    await _initializeDatabase();
-    return await _bookmarkCollection!.count({'postId': postId});
+    final query = await _firestore
+        .collection(_collectionName)
+        .where('postId', isEqualTo: postId)
+        .get();
+    return query.docs.length;
   }
 
   static Future<List<String>> getBookmarkedPostIdsByUser(
     String userId,
     String albumId,
   ) async {
-    await _initializeDatabase();
-    final bookmarks = await _bookmarkCollection!.find({
-      'userId': userId,
-      'albumId': albumId,
-    }).toList();
-    return bookmarks.map((b) => b['postId'] as String).toList();
+    final query = await _firestore
+        .collection(_collectionName)
+        .where('userId', isEqualTo: userId)
+        .where('albumId', isEqualTo: albumId)
+        .get();
+
+    return query.docs.map((doc) => doc.data()['postId'] as String).toList();
   }
 }

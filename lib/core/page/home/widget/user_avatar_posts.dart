@@ -10,7 +10,8 @@ Widget buildUserAvatar(
   return GestureDetector(
     onTap: onTap,
     child: CircleAvatar(
-      radius: 20,
+      backgroundColor: Colors.transparent,
+      radius: 25,
       backgroundImage: MemoryImage(profileImageUrl),
     ),
   );

@@ -25,8 +25,7 @@ class _HomePageState extends State<HomePage> {
   bool _hasError = false;
   String _errorMessage = '';
   String? _currentUserId;
-  int _currentUserFollowingCount = 0;
-  int _currentUserFollowersCount = 0;
+
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
 
@@ -102,18 +101,13 @@ class _HomePageState extends State<HomePage> {
       );
 
       // Load current user's following statistics
-      final followingCount = await UsersService.getFollowingCount(
-        _currentUserId!,
-      );
-      final followersCount = await UsersService.getFollowersCount(
-        _currentUserId!,
-      );
+      await UsersService.getFollowingCount(_currentUserId!);
+      await UsersService.getFollowersCount(_currentUserId!);
 
       setState(() {
         _usersWithStatus = usersWithStatus;
         _filteredUsersWithStatus = usersWithStatus;
-        _currentUserFollowingCount = followingCount;
-        _currentUserFollowersCount = followersCount;
+
         _isLoadingUsers = false;
       });
     } catch (e) {
@@ -161,77 +155,77 @@ class _HomePageState extends State<HomePage> {
             )
           : null,
       body: SafeArea(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
           children: [
-            /// Left content area (Post list)
             Expanded(
-              flex: 2,
-              child: isMobile(context)
-                  ? ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(
-                        context,
-                      ).copyWith(scrollbars: false),
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 16),
-                            PostDisplayPage(), // This should return a Column of cards for mobile
-                          ],
-                        ),
-                      ),
-                    )
-                  : ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(
-                        context,
-                      ).copyWith(scrollbars: false),
-                      child: SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            children: [
-                              // Story section for tablet/desktop
-                              if (isTablet(context))
-                                if (isTablet(context))
-                                  const SizedBox(height: 16),
-
-                              // Posts view with proper scrolling
-                              PostDisplayPage(),
-                            ],
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  /// Left content area (Post list)
+                  Expanded(
+                    flex: 2,
+                    child: isMobile(context)
+                        ? ScrollConfiguration(
+                            behavior: ScrollConfiguration.of(
+                              context,
+                            ).copyWith(scrollbars: false),
+                            child: SingleChildScrollView(
+                              child: Column(
+                                children: [
+                                  PostDisplayPage(), // This should return a Column of cards for mobile
+                                ],
+                              ),
+                            ),
+                          )
+                        : ScrollConfiguration(
+                            behavior: ScrollConfiguration.of(
+                              context,
+                            ).copyWith(scrollbars: false),
+                            child: SingleChildScrollView(
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  children: [
+                                    // Posts view with proper scrolling
+                                    PostDisplayPage(),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-            ),
+                  ),
 
-            /// Right sidebar (desktop only)
-            if (isDesktop(context))
-              Expanded(
-                flex: 1,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    // Search bar for users
-                    CommonSearchTextfield(
-                      controller: _searchController,
-                      showSuggestions: false,
-                      suggestions: [],
-                      showClear: false,
-                      isSearching: false,
-                      onSearchResults: (results) {},
-                      onSearch: () {},
-                    ),
+                  /// Right sidebar (desktop only)
+                  if (isDesktop(context))
                     Expanded(
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(
-                          context,
-                        ).copyWith(scrollbars: false),
-                        child: _buildUsersSidebar(),
+                      flex: 1,
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          // Search bar for users
+                          CommonSearchTextfield(
+                            controller: _searchController,
+                            showSuggestions: false,
+                            suggestions: [],
+                            showClear: false,
+                            isSearching: false,
+                            onSearchResults: (results) {},
+                            onSearch: () {},
+                          ),
+                          Expanded(
+                            child: ScrollConfiguration(
+                              behavior: ScrollConfiguration.of(
+                                context,
+                              ).copyWith(scrollbars: false),
+                              child: _buildUsersSidebar(),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
+            ),
           ],
         ),
       ),

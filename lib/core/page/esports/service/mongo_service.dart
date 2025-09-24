@@ -1,36 +1,31 @@
-import 'package:everesports/database/config/config.dart';
-import 'package:mongo_dart/mongo_dart.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/tournament.dart';
 
-class MongoEsportsService {
-  static final _dbUrl = configDatabase;
+class FirebaseEsportsService {
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static const _collectionName = 'Tournament';
 
   static Future<List<Tournament>> getTournaments() async {
     try {
-      final db = await Db.create(_dbUrl);
-      await db.open();
-      final collection = db.collection(_collectionName);
-      final tournamentsRaw = await collection.find().toList();
-      print('Fetched tournaments: ' + tournamentsRaw.toString());
-      await db.close();
+      final querySnapshot = await _firestore.collection(_collectionName).get();
+      final tournamentsRaw = querySnapshot.docs
+          .map((doc) => doc.data())
+          .toList();
+      print('Fetched tournaments: $tournamentsRaw');
       return tournamentsRaw.map((e) => Tournament.fromMap(e)).toList();
     } catch (e) {
-      print('Error fetching tournaments: ' + e.toString());
+      print('Error fetching tournaments: $e');
       return [];
     }
   }
 
   static Future<List<Map<String, dynamic>>> getMaps() async {
     try {
-      final db = await Db.create(_dbUrl);
-      await db.open();
-      final collection = db.collection('maps');
-      final mapsRaw = await collection.find().toList();
-      await db.close();
-      return mapsRaw;
+      final querySnapshot = await _firestore.collection('maps').get();
+      final mapsRaw = querySnapshot.docs.map((doc) => doc.data()).toList();
+      return List<Map<String, dynamic>>.from(mapsRaw);
     } catch (e) {
-      print('Error fetching maps: ' + e.toString());
+      print('Error fetching maps: $e');
       return [];
     }
   }
@@ -38,34 +33,24 @@ class MongoEsportsService {
   // Fetch banners from the 'banners' collection
   static Future<List<Map<String, dynamic>>> getBanners() async {
     try {
-      final db = await Db.create(_dbUrl);
-      await db.open();
-      final collection = db.collection('banners');
-      final bannersRaw = await collection.find().toList();
-      await db.close();
-      return bannersRaw;
+      final querySnapshot = await _firestore.collection('banners').get();
+      final bannersRaw = querySnapshot.docs.map((doc) => doc.data()).toList();
+      return List<Map<String, dynamic>>.from(bannersRaw);
     } catch (e) {
-      print('Error fetching banners: ' + e.toString());
+      print('Error fetching banners: $e');
       return [];
     }
   }
 
   Future<Map<String, dynamic>?> getWeaponById(String id) async {
     try {
-      final db = await Db.create(_dbUrl);
-      await db.open();
-      var collection = db.collection('weapon');
-      Map<String, dynamic>? weapon;
-      try {
-        weapon = await collection.findOne(where.eq('_id', ObjectId.parse(id)));
-      } catch (e) {
-        // Try as string
-        weapon = await collection.findOne(where.eq('_id', id));
-        // Try as {'_id': {'\$oid': id}}
-        weapon ??= await collection.findOne(where.eq('_id', {'\$oid': id}));
+      final docSnapshot = await _firestore.collection('weapon').doc(id).get();
+      if (docSnapshot.exists) {
+        return docSnapshot.data();
+      } else {
+        print('Weapon not found for id: $id');
+        return null;
       }
-      await db.close();
-      return weapon;
     } catch (e) {
       print('Error fetching weapon: $e');
       return null;

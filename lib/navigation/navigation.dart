@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:typed_data';
-
 import 'package:everesports/Theme/colors.dart';
 import 'package:everesports/core/auth/home/login_home.dart';
 import 'package:everesports/core/auth/logout/logout.dart';
@@ -9,6 +8,7 @@ import 'package:everesports/core/page/addGame/add_game.dart';
 import 'package:everesports/core/page/cristols/widget/cristol_button.dart';
 import 'package:everesports/core/page/esports/esports.dart';
 import 'package:everesports/core/page/home/home.dart';
+import 'package:everesports/core/page/notification/notification.dart';
 import 'package:everesports/core/page/profile/profile_page.dart';
 import 'package:everesports/core/page/profile/service/profile_service.dart'
     hide AuthServiceFireBase;
@@ -47,10 +47,6 @@ class _NavigationPageState extends State<NavigationPage> {
   void initState() {
     super.initState();
     try {
-      profileService = ProfileService(
-        connectionString: configDatabase,
-        serverBaseUrl: serverBaseUrl,
-      );
       profileServicefirebase = ProfileServiceFireBase();
       _checkSessionAndFetch();
       _checkSessionAndFetchFireBase();
@@ -124,7 +120,7 @@ class _NavigationPageState extends State<NavigationPage> {
     const HomePage(),
     SparkPage(),
     const EsportsPage(),
-    const Center(child: Text('Notifications Page')),
+    const NotificationPage(),
     const FireBaseProfilePage(),
     const SparkUploadPage(),
     const UploadPage(),
@@ -324,7 +320,7 @@ class _NavigationPageState extends State<NavigationPage> {
       final user = await profileServicefirebase!.fetchUserById(docId);
       if (user == null) {
         if (!mounted) return;
-        _showError("User not found.");
+
         return;
       }
 

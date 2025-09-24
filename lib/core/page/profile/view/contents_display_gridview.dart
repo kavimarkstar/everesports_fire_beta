@@ -3,7 +3,6 @@ import 'package:everesports/core/auth/home/login_home.dart';
 import 'package:everesports/database/config/config.dart';
 import 'package:everesports/widget/common_elevated_button.dart';
 import 'package:flutter/material.dart';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ContentsDisplayGridview extends StatefulWidget {
@@ -47,21 +46,6 @@ class _ContentsDisplayGridviewState extends State<ContentsDisplayGridview>
       );
       return;
     }
-    setState(() {
-      userId = savedUserId;
-      _futurePosts = fetchPosts();
-    });
-  }
-
-  Future<List<Map<String, dynamic>>> fetchPosts() async {
-    final db = await mongo.Db.create(configDatabase);
-    await db.open();
-    final collection = db.collection('posts');
-    final posts = userId != null
-        ? await collection.find({'userId': userId}).toList()
-        : <Map<String, dynamic>>[];
-    await db.close();
-    return posts;
   }
 
   @override
@@ -156,15 +140,6 @@ class PostDetailPage extends StatelessWidget {
   final String? imageUrl;
   const PostDetailPage({super.key, required this.post, required this.imageUrl});
 
-  Future<void> _deletePost(BuildContext context) async {
-    final db = await mongo.Db.create(configDatabase);
-    await db.open();
-    final collection = db.collection('posts');
-    await collection.deleteOne({'_id': post['_id']});
-    await db.close();
-    if (context.mounted) Navigator.pop(context);
-  }
-
   void _editPost(BuildContext context) async {
     final updated = await Navigator.push(
       context,
@@ -211,9 +186,7 @@ class PostDetailPage extends StatelessWidget {
                 ],
               ),
             );
-            if (confirm == true) {
-              await _deletePost(context);
-            }
+            if (confirm == true) {}
           },
         ),
       ],
@@ -301,28 +274,8 @@ class _EditPostPageState extends State<EditPostPage> {
     super.dispose();
   }
 
-  Future<void> _save() async {
-    setState(() => _isSaving = true);
-    final db = await mongo.Db.create(configDatabase);
-    await db.open();
-    final collection = db.collection('posts');
-    await collection.updateOne(
-      {'_id': widget.post['_id']},
-      {
-        'set': {
-          'title': _titleController.text.trim(),
-          'description': _descController.text.trim(),
-        },
-      },
-    );
-    await db.close();
-    setState(() => _isSaving = false);
-    if (context.mounted) Navigator.pop(context, true);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Post')),
       body: Padding(
@@ -346,7 +299,7 @@ class _EditPostPageState extends State<EditPostPage> {
                 ? const CircularProgressIndicator()
                 : SizedBox(
                     width: double.infinity,
-                    child: commonElevatedButtonbuild(context, 'Save', _save),
+                    child: commonElevatedButtonbuild(context, 'Save', () {}),
                   ),
           ],
         ),

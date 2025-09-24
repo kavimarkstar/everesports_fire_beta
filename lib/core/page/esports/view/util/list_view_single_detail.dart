@@ -8,7 +8,6 @@ Widget buildListViewSingleDetail(
   VoidCallback onPressed,
   VoidCallback onTap,
 ) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
   return buildCard(
     context,
     Padding(
@@ -39,18 +38,15 @@ Widget buildListViewSingleDetail(
             ),
           ),
 
-          if (tournament.gameName != null &&
-              tournament.gameName != 'Null' &&
+          if (tournament.gameName != 'Null' &&
               tournament.gameName != 'null' &&
               tournament.gameName != '')
             buildDetail(context, "Game Name", tournament.gameName),
-          if (tournament.gameMode != null &&
-              tournament.gameMode != 'Null' &&
+          if (tournament.gameMode != 'Null' &&
               tournament.gameMode != 'null' &&
               tournament.gameMode != '')
             buildDetail(context, "Game Mode", tournament.gameMode),
-          if (tournament.subGameMode != null &&
-              tournament.subGameMode != 'Null' &&
+          if (tournament.subGameMode != 'Null' &&
               tournament.subGameMode != 'null' &&
               tournament.subGameMode != '')
             buildDetail(context, "Sub Game Mode", tournament.subGameMode),
@@ -60,18 +56,15 @@ Widget buildListViewSingleDetail(
               tournament.round != '')
             buildDetail(context, "Round", tournament.round ?? 'N/A'),
 
-          if (tournament.minimumLevel != null &&
-              tournament.minimumLevel != 'Null' &&
+          if (tournament.minimumLevel != 'Null' &&
               tournament.minimumLevel != 'null' &&
               tournament.minimumLevel != '')
             buildDetail(context, "Minimum Level", tournament.minimumLevel),
-          if (tournament.player != null &&
-              tournament.player != 'Null' &&
+          if (tournament.player != 'Null' &&
               tournament.player != 'null' &&
               tournament.player != '')
             buildDetail(context, "Player", tournament.player),
-          if (tournament.teamMode != null &&
-              tournament.teamMode != 'Null' &&
+          if (tournament.teamMode != 'Null' &&
               tournament.teamMode != 'null' &&
               tournament.teamMode != '')
             buildDetail(context, "Team Mode", tournament.teamMode),
@@ -84,78 +77,63 @@ Widget buildListViewSingleDetail(
               "Default Coin",
               tournament.defaltCoin ?? 'N/A',
             ),
-          if (tournament.specialMode != null &&
-              tournament.specialMode != 'Null' &&
+          if (tournament.specialMode != 'Null' &&
               tournament.specialMode != 'null' &&
               tournament.specialMode != '')
             buildDetail(context, "Special Mode", tournament.specialMode),
-          if (tournament.specialAirdrop != null &&
-              tournament.specialAirdrop != 'Null' &&
+          if (tournament.specialAirdrop != 'Null' &&
               tournament.specialAirdrop != 'null' &&
               tournament.specialAirdrop != '')
             buildDetail(context, "Special Airdrop", tournament.specialAirdrop),
-          if (tournament.aridrop != null &&
-              tournament.aridrop != 'Null' &&
+          if (tournament.aridrop != 'Null' &&
               tournament.aridrop != 'null' &&
               tournament.aridrop != '')
             buildDetail(context, "Aridrop", tournament.aridrop),
-          if (tournament.hpHelth != null &&
-              tournament.hpHelth != 'Null' &&
+          if (tournament.hpHelth != 'Null' &&
               tournament.hpHelth != 'null' &&
               tournament.hpHelth != '')
             buildDetail(context, "HP Health", tournament.hpHelth),
-          if (tournament.movementSpeed != null &&
-              tournament.movementSpeed != 'Null' &&
+          if (tournament.movementSpeed != 'Null' &&
               tournament.movementSpeed != 'null' &&
               tournament.movementSpeed != '')
             buildDetail(context, "Movement Speed", tournament.movementSpeed),
-          if (tournament.jumpHeight != null &&
-              tournament.jumpHeight != 'Null' &&
+          if (tournament.jumpHeight != 'Null' &&
               tournament.jumpHeight != 'null' &&
               tournament.jumpHeight != '')
             buildDetail(context, "Jump Height", tournament.jumpHeight),
-          if (tournament.ammoLimit != null &&
-              tournament.ammoLimit != 'Null' &&
+          if (tournament.ammoLimit != 'Null' &&
               tournament.ammoLimit != 'null' &&
               tournament.ammoLimit != '')
             buildDetail(context, "Ammo Limit", tournament.ammoLimit),
-          if (tournament.friendlyFire != null &&
-              tournament.friendlyFire != 'Null' &&
+          if (tournament.friendlyFire != 'Null' &&
               tournament.friendlyFire != 'null' &&
               tournament.friendlyFire != '')
             buildDetail(context, "Friendly Fire", tournament.friendlyFire),
-          if (tournament.characterSkill != null &&
-              tournament.characterSkill != 'Null' &&
+          if (tournament.characterSkill != 'Null' &&
               tournament.characterSkill != 'null' &&
               tournament.characterSkill != '')
             buildDetail(context, "Character Skill", tournament.characterSkill),
-          if (tournament.preciseAim != null &&
-              tournament.preciseAim != 'Null' &&
+          if (tournament.preciseAim != 'Null' &&
               tournament.preciseAim != 'null' &&
               tournament.preciseAim != '')
             buildDetail(context, "Precise Aim", tournament.preciseAim),
-          if (tournament.loadout != null &&
-              tournament.loadout != 'Null' &&
+          if (tournament.loadout != 'Null' &&
               tournament.loadout != 'null' &&
               tournament.loadout != '')
             buildDetail(context, "Loadout", tournament.loadout),
-          if (tournament.headshot != null &&
-              tournament.headshot != 'Null' &&
+          if (tournament.headshot != 'Null' &&
               tournament.headshot != 'null' &&
               tournament.headshot != '')
             buildDetail(context, "Headshot", tournament.headshot),
-          if (tournament.environment != null &&
-              tournament.environment != 'Null' &&
+          if (tournament.environment != 'Null' &&
               tournament.environment != 'null' &&
               tournament.environment != '')
             buildDetail(context, "Environment", tournament.environment),
-          if (tournament.safeZoneMoving != null &&
-              tournament.safeZoneMoving != 'Null' &&
+          if (tournament.safeZoneMoving != 'Null' &&
               tournament.safeZoneMoving != 'null' &&
               tournament.safeZoneMoving != '')
             buildDetail(context, "Safe Zone Moving", tournament.safeZoneMoving),
-          if (tournament.highTierLootZone != null &&
-              tournament.highTierLootZone != 'Null' &&
+          if (tournament.highTierLootZone != 'Null' &&
               tournament.highTierLootZone != 'null' &&
               tournament.highTierLootZone != '')
             buildDetail(
@@ -163,18 +141,15 @@ Widget buildListViewSingleDetail(
               "High Tier Loot Zone",
               tournament.highTierLootZone,
             ),
-          if (tournament.vehicle != null &&
-              tournament.vehicle != 'Null' &&
+          if (tournament.vehicle != 'Null' &&
               tournament.vehicle != 'null' &&
               tournament.vehicle != '')
             buildDetail(context, "Vehicle", tournament.vehicle),
-          if (tournament.autoRevival != null &&
-              tournament.autoRevival != 'Null' &&
+          if (tournament.autoRevival != 'Null' &&
               tournament.autoRevival != 'null' &&
               tournament.autoRevival != '')
             buildDetail(context, "Auto Revival", tournament.autoRevival),
-          if (tournament.zoneShrinkSpeed != null &&
-              tournament.zoneShrinkSpeed != 'Null' &&
+          if (tournament.zoneShrinkSpeed != 'Null' &&
               tournament.zoneShrinkSpeed != 'null' &&
               tournament.zoneShrinkSpeed != '')
             buildDetail(
@@ -182,8 +157,7 @@ Widget buildListViewSingleDetail(
               "Zone Shrink Speed",
               tournament.zoneShrinkSpeed,
             ),
-          if (tournament.outOfZoneDamage != null &&
-              tournament.outOfZoneDamage != 'Null' &&
+          if (tournament.outOfZoneDamage != 'Null' &&
               tournament.outOfZoneDamage != 'null' &&
               tournament.outOfZoneDamage != '')
             buildDetail(
@@ -191,29 +165,24 @@ Widget buildListViewSingleDetail(
               "Out of Zone Damage",
               tournament.outOfZoneDamage,
             ),
-          if (tournament.supplyGadget != null &&
-              tournament.supplyGadget != 'Null' &&
+          if (tournament.supplyGadget != 'Null' &&
               tournament.supplyGadget != 'null' &&
               tournament.supplyGadget != '')
             buildDetail(context, "Supply Gadget", tournament.supplyGadget),
-          if (tournament.deathSpectate != null &&
-              tournament.deathSpectate != 'Null' &&
+          if (tournament.deathSpectate != 'Null' &&
               tournament.deathSpectate != 'null' &&
               tournament.deathSpectate != '')
             buildDetail(context, "Death Spectate", tournament.deathSpectate),
-          if (tournament.swichPosition != null &&
-              tournament.swichPosition != 'Null' &&
+          if (tournament.swichPosition != 'Null' &&
               tournament.swichPosition != 'null' &&
               tournament.swichPosition != '')
             buildDetail(context, "Swich Position", tournament.swichPosition),
-          if (tournament.blockEmulator != null &&
-              tournament.blockEmulator != 'Null' &&
+          if (tournament.blockEmulator != 'Null' &&
               tournament.blockEmulator != 'null' &&
               tournament.blockEmulator != '')
             buildDetail(context, "Block Emulator", tournament.blockEmulator),
 
-          if (tournament.selectedMap != null &&
-              tournament.selectedMap != 'Null' &&
+          if (tournament.selectedMap != 'Null' &&
               tournament.selectedMap != 'null' &&
               tournament.selectedMap != '')
             buildDetail(context, "Selected Map", tournament.selectedMap),

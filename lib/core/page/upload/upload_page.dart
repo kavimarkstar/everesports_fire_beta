@@ -1,6 +1,9 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:everesports/Theme/colors.dart';
+import 'package:everesports/responsive/responsive.dart';
+import 'package:everesports/widget/common_icon_eleveted_button.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -227,109 +230,139 @@ class _UploadPageState extends State<UploadPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Upload Post"),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        actions: _isUploading
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: _cancelUpload,
-                  tooltip: "Cancel upload",
-                ),
-              ]
-            : null,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (_uploadError != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red[200]!),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.red),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _uploadError!,
-                          style: const TextStyle(color: Colors.red),
-                        ),
+      appBar: isMobile(context)
+          ? AppBar(
+              title: const Text("Upload Post"),
+
+              actions: _isUploading
+                  ? [
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: _cancelUpload,
+                        tooltip: "Cancel upload",
                       ),
-                    ],
+                    ]
+                  : null,
+            )
+          : null,
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: SafeArea(
+          child: ScrollConfiguration(
+            behavior: ScrollConfiguration.of(
+              context,
+            ).copyWith(scrollbars: false),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_uploadError != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _uploadError!,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              const Text(
-                "Description",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _descriptionController,
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: "What's on your mind?",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 20),
-              if (_isUploading) ...[
-                const Text(
-                  "Uploading...",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
+
                 const SizedBox(height: 8),
-                LinearProgressIndicator(value: _uploadProgress),
-                const SizedBox(height: 8),
-                Text(
-                  "${(_uploadProgress * 100).toStringAsFixed(1)}%",
-                  textAlign: TextAlign.center,
+                TextField(
+                  controller: _descriptionController,
+                  maxLines: 6,
+                  decoration: InputDecoration(
+                    hintText: "What's on your mind?",
+
+                    filled: true,
+                    fillColor: isDarkMode
+                        ? secondBlackColor
+                        : secondWhiteGrayColor,
+
+                    hintStyle: TextStyle(
+                      color: isDarkMode ? Colors.white70 : Colors.grey[700],
+                      fontSize: 16,
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        isMobile(context) ? 8 : 8,
+                      ),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        isMobile(context) ? 8 : 8,
+                      ),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        isMobile(context) ? 8 : 8,
+                      ),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 20),
-              ],
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _isUploading ? null : _pickImages,
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text("Select Images"),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
+                if (_isUploading) ...[
+                  const Text(
+                    "Uploading...",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _isUploading || _selectedFiles.isEmpty
-                          ? null
-                          : _submitPost,
-                      icon: const Icon(Icons.cloud_upload),
-                      label: const Text("Upload Post"),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.deepPurple,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(value: _uploadProgress),
+                  const SizedBox(height: 8),
+                  Text(
+                    "${(_uploadProgress * 100).toStringAsFixed(1)}%",
+                    textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 20),
                 ],
-              ),
-              const SizedBox(height: 20),
-              _buildPreview(),
-            ],
+
+                _buildPreview(),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: commoniconElevatedButtonbuild(
+                        context,
+                        "Select",
+                        _pickImages,
+                        Icons.photo_library,
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: commoniconElevatedButtonbuild(
+                        context,
+                        "Post",
+                        _submitPost,
+                        Icons.cloud_upload,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -341,9 +374,8 @@ class _UploadPageState extends State<UploadPage> {
       return Container(
         height: 200,
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!),
+          border: Border.all(color: Colors.grey[300]!, width: 0.5),
           borderRadius: BorderRadius.circular(12),
-          color: Colors.grey[50],
         ),
         child: const Center(
           child: Column(
@@ -388,8 +420,8 @@ class _UploadPageState extends State<UploadPage> {
                   ),
                 ),
                 Positioned(
-                  top: 4,
-                  right: 4,
+                  top: 5,
+                  right: 5,
                   child: InkWell(
                     onTap: () {
                       setState(() {
@@ -397,9 +429,9 @@ class _UploadPageState extends State<UploadPage> {
                       });
                     },
                     child: const CircleAvatar(
-                      radius: 12,
+                      radius: 15,
                       backgroundColor: Colors.red,
-                      child: Icon(Icons.close, size: 14, color: Colors.white),
+                      child: Icon(Icons.close, size: 17, color: Colors.white),
                     ),
                   ),
                 ),

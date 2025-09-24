@@ -1,6 +1,6 @@
 import 'package:everesports/Theme/colors.dart';
 import 'package:flutter/material.dart';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TermsOfServicePage extends StatefulWidget {
   const TermsOfServicePage({super.key});
@@ -10,7 +10,6 @@ class TermsOfServicePage extends StatefulWidget {
 }
 
 class _TermsOfServicePageState extends State<TermsOfServicePage> {
-  static const _connectionString = 'mongodb://localhost:27017/everesports';
   static const _collectionName = 'terms_of_service';
 
   List<Map<String, dynamic>> terms = [];
@@ -26,23 +25,23 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
 
   Future<void> _fetchTerms() async {
     try {
-      final db = mongo.Db(_connectionString);
-      await db.open();
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection(_collectionName)
+          .orderBy('order', descending: false)
+          .get();
 
-      final data = await db.collection(_collectionName).find().toList();
-      await db.close();
+      final data = querySnapshot.docs.map((doc) {
+        final d = doc.data();
+        return {
+          'title': d['title']?.toString() ?? 'Untitled',
+          'description': d['description']?.toString() ?? 'No content',
+        };
+      }).toList();
 
       if (!mounted) return;
 
       setState(() {
-        terms = data
-            .map(
-              (doc) => {
-                'title': doc['title']?.toString() ?? 'Untitled',
-                'description': doc['description']?.toString() ?? 'No content',
-              },
-            )
-            .toList();
+        terms = data;
         isLoading = false;
       });
     } catch (e) {
@@ -74,7 +73,6 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
           decoration: BoxDecoration(
             color: isDarkMode ? mainWhiteColor : mainBlackColor,
           ),
-
           child: Center(
             child: Text(
               "data",
@@ -94,7 +92,9 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
                   padding: const EdgeInsets.all(20),
                   child: SingleChildScrollView(
                     child: Text(
-                      terms[selectedIndex]['description'],
+                      terms.isNotEmpty
+                          ? terms[selectedIndex]['description']
+                          : '',
                       style: const TextStyle(fontSize: 18),
                     ),
                   ),
@@ -118,7 +118,7 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
             padding: const EdgeInsets.all(20),
             child: SingleChildScrollView(
               child: Text(
-                terms[selectedIndex]['description'],
+                terms.isNotEmpty ? terms[selectedIndex]['description'] : '',
                 style: const TextStyle(fontSize: 16),
               ),
             ),
@@ -137,9 +137,7 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
         return ListTile(
           selected: isSelected,
           selectedTileColor: isSelected
-              ? isDarkMode
-                    ? mainWhiteColor
-                    : mainBlackColor
+              ? (isDarkMode ? mainWhiteColor : mainBlackColor)
               : null,
           title: Text(
             terms[index]['title'],
@@ -162,7 +160,7 @@ class _TermsOfServicePageState extends State<TermsOfServicePage> {
           const Icon(Icons.error_outline, size: 48, color: Colors.red),
           const SizedBox(height: 16),
           Text(
-            error!,
+            error ?? '',
             style: const TextStyle(fontSize: 18),
             textAlign: TextAlign.center,
           ),

@@ -114,7 +114,7 @@ class _SearchBoxViewState extends State<SearchBoxView> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final theme = Theme.of(context);
+    Theme.of(context);
     return isMobile(context)
         ? Column(
             children: [

@@ -1,5 +1,4 @@
-import 'package:mongo_dart/mongo_dart.dart';
-import 'package:everesports/database/config/config.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PremiumPackage {
   final String id;
@@ -37,20 +36,41 @@ class PremiumPackage {
       }
     }
 
+    // Firestore document id can be in 'id' or 'doc.id'
+    String id = map['id']?.toString() ?? map['_id']?.toString() ?? '';
+
+    // Firestore Timestamps
+    DateTime createdAt;
+    DateTime updatedAt;
+    if (map['createdAt'] is Timestamp) {
+      createdAt = (map['createdAt'] as Timestamp).toDate();
+    } else if (map['createdAt'] is DateTime) {
+      createdAt = map['createdAt'];
+    } else if (map['createdAt'] is String) {
+      createdAt = DateTime.tryParse(map['createdAt']) ?? DateTime.now();
+    } else {
+      createdAt = DateTime.now();
+    }
+    if (map['updatedAt'] is Timestamp) {
+      updatedAt = (map['updatedAt'] as Timestamp).toDate();
+    } else if (map['updatedAt'] is DateTime) {
+      updatedAt = map['updatedAt'];
+    } else if (map['updatedAt'] is String) {
+      updatedAt = DateTime.tryParse(map['updatedAt']) ?? DateTime.now();
+    } else {
+      updatedAt = DateTime.now();
+    }
+
     return PremiumPackage(
-      id: map['_id'].toString(),
+      id: id,
       title: map['title'] ?? map['name'] ?? 'Unknown Plan',
       price: formattedPrice,
       description: map['description'] ?? 'No description available',
       items: List<String>.from(map['items'] ?? []),
       duration: map['duration'] ?? 'monthly',
       isPopular: map['isPopular'] ?? false,
-      createdAt: map['createdAt'] is DateTime
-          ? map['createdAt']
-          : DateTime.parse(map['createdAt']),
-      updatedAt: map['updatedAt'] is DateTime
-          ? map['updatedAt']
-          : DateTime.parse(map['updatedAt']),
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 
@@ -70,22 +90,24 @@ class PremiumPackage {
 }
 
 class PremiumPackageService {
+  static const String _collectionName = 'premium_packages';
+
   static Future<List<PremiumPackage>> getPremiumPackages() async {
     try {
-      final db = await Db.create(configDatabase);
-      await db.open();
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection(_collectionName)
+          .get();
 
-      final collection = db.collection('premium_packages');
-      final cursor = await collection.find();
+      List<PremiumPackage> packages = querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        // Attach Firestore doc id if not present in data
+        if (!data.containsKey('id')) {
+          data['id'] = doc.id;
+        }
+        return PremiumPackage.fromMap(data);
+      }).toList();
 
-      List<PremiumPackage> packages = [];
-      await for (final doc in cursor) {
-        packages.add(PremiumPackage.fromMap(doc));
-      }
-
-      await db.close();
-
-      // Sort by popularity and price
+      // Sort by popularity and title
       packages.sort((a, b) {
         if (a.isPopular && !b.isPopular) return -1;
         if (!a.isPopular && b.isPopular) return 1;

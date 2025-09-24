@@ -35,7 +35,7 @@ class _FollowListPageState extends State<FollowListPage>
 
   Future<void> _initializeData() async {
     try {
-      await DatabaseService.initialize(); // Ensure DB is initialized
+      await FollowListPageService; // Ensure DB is initialized
       await _checkSessionAndFetch();
     } catch (e) {
       print('Initialization error: $e');
@@ -82,7 +82,7 @@ class _FollowListPageState extends State<FollowListPage>
     if (_userId == null) return;
 
     try {
-      final following = await DatabaseService.getUserFollowing(_userId!);
+      final following = await FollowListPageService.getUserFollowing(_userId!);
       if (mounted) {
         setState(() {
           _followingList = following;
@@ -100,7 +100,7 @@ class _FollowListPageState extends State<FollowListPage>
     if (_userId == null) return;
 
     try {
-      final followers = await DatabaseService.getUserFollowers(_userId!);
+      final followers = await FollowListPageService.getUserFollowers(_userId!);
       if (mounted) {
         setState(() {
           _followersList = followers;

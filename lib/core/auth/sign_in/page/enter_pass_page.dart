@@ -85,7 +85,6 @@ class _EnterPassFireBasePageState extends State<EnterPassFireBasePage> {
           commonNavigationbuild(context, EverEsports());
         } else {
           setState(() {
-            _errorText = "User not found.";
             _isLoading = false;
           });
         }

@@ -8,6 +8,7 @@ import 'package:everesports/core/page/profile/widget/follow_counts.dart';
 import 'package:everesports/core/page/profile/widget/navigatin_bar_profile.dart';
 import 'package:everesports/core/page/profile/widget/social_media_buttons.dart';
 import 'package:everesports/core/page/setting/setting_page.dart';
+import 'package:everesports/core/page/spark/upload/spark_upload.dart';
 import 'package:everesports/core/page/upload/upload_page.dart';
 
 import 'package:everesports/language/controller/all_language.dart';
@@ -31,7 +32,6 @@ class FireBaseProfilePage extends StatefulWidget {
 
 class _FireBaseProfilePageProfilePageState extends State<FireBaseProfilePage> {
   bool _isLoading = true;
-  bool _isUploadingImage = false;
 
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -97,7 +97,7 @@ class _FireBaseProfilePageProfilePageState extends State<FireBaseProfilePage> {
       final user = await profileServicefirebase.fetchUserById(docId);
       if (user == null) {
         if (!mounted) return;
-        _showError("User not found.");
+
         return;
       }
 
@@ -140,6 +140,14 @@ class _FireBaseProfilePageProfilePageState extends State<FireBaseProfilePage> {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  bool _isUploadingShow = false;
+
+  void _UploadingShow() {
+    setState(() {
+      _isUploadingShow = !_isUploadingShow;
+    });
   }
 
   @override
@@ -320,13 +328,71 @@ class _FireBaseProfilePageProfilePageState extends State<FireBaseProfilePage> {
             ),
 
       floatingActionButton: isMobile(context)
-          ? FloatingActionButton(
-              backgroundColor: isDark ? mainWhiteColor : mainBlackColor,
-
-              onPressed: () {
-                commonNavigationbuild(context, UploadPage());
-              },
-              child: const Icon(Icons.add),
+          ? AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) =>
+                  ScaleTransition(scale: animation, child: child),
+              child: Column(
+                key: ValueKey(_isUploadingShow),
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder: (child, animation) => SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 0.5),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: FadeTransition(opacity: animation, child: child),
+                    ),
+                    child: _isUploadingShow
+                        ? Column(
+                            key: const ValueKey('show'),
+                            children: [
+                              FloatingActionButton(
+                                backgroundColor: isDark
+                                    ? mainWhiteColor
+                                    : mainBlackColor,
+                                onPressed: () {
+                                  commonNavigationbuild(
+                                    context,
+                                    SparkUploadPage(),
+                                  );
+                                },
+                                child: const Icon(Icons.post_add_sharp),
+                              ),
+                              const SizedBox(height: 10),
+                              FloatingActionButton(
+                                backgroundColor: isDark
+                                    ? mainWhiteColor
+                                    : mainBlackColor,
+                                onPressed: () {
+                                  commonNavigationbuild(context, UploadPage());
+                                },
+                                child: const Icon(Icons.add),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                  FloatingActionButton(
+                    backgroundColor: isDark ? mainWhiteColor : mainBlackColor,
+                    onPressed: () {
+                      _UploadingShow();
+                    },
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) =>
+                          RotationTransition(turns: animation, child: child),
+                      child: Icon(
+                        _isUploadingShow ? Icons.close : Icons.add,
+                        key: ValueKey(_isUploadingShow),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             )
           : null,
     );

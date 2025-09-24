@@ -1,7 +1,6 @@
 import 'package:everesports/core/page/auth/include/navigatin_bar_profile.dart';
 import 'package:everesports/core/page/auth/service/follow_service.dart';
 import 'package:everesports/core/page/auth/service/like_service.dart';
-import 'package:everesports/core/page/auth/service/user_profile_service.dart';
 import 'package:everesports/core/page/auth/util/avatars_style.dart';
 import 'package:flutter/material.dart';
 import 'dart:developer' as developer;
@@ -27,7 +26,7 @@ class _UsersProfilesPageState extends State<UsersProfilesPage> {
     // Add a small delay to ensure the UI renders first
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) {
-        _fetchUserProfile();
+        // _fetchUserProfile();
         _fetchFollowLists(widget.userId);
       }
     });
@@ -41,7 +40,7 @@ class _UsersProfilesPageState extends State<UsersProfilesPage> {
   int _likeCount = 0;
   bool _hasNetworkError = false;
 
-  Future<void> _fetchUserProfile() async {
+  /* Future<void> _fetchUserProfile() async {
     setState(() {
       _isLoading = true;
       _error = null;
@@ -53,7 +52,8 @@ class _UsersProfilesPageState extends State<UsersProfilesPage> {
 
       // Add timeout to prevent hanging
       final userProfile =
-          await UserProfileService.getUserProfileById(widget.userId).timeout(
+      
+          await UserProfileService.getUserById(widget.userId).timeout(
             const Duration(seconds: 15),
             onTimeout: () {
               developer.log('User profile fetch timed out after 15 seconds');
@@ -68,10 +68,10 @@ class _UsersProfilesPageState extends State<UsersProfilesPage> {
 
       if (userProfile != null) {
         developer.log(
-          'User profile fetched successfully: ${userProfile.toMap()}',
+          'User profile fetched successfully: $userProfile',
         );
         setState(() {
-          _userProfile = userProfile.toMap();
+          _userProfile = userProfile;
           _isLoading = false;
         });
       } else {
@@ -95,7 +95,7 @@ class _UsersProfilesPageState extends State<UsersProfilesPage> {
       } else if (e.toString().contains('TimeoutException')) {
         errorMessage = 'Request timed out. Please try again.';
         _hasNetworkError = true;
-      } else if (e.toString().contains('MongoException')) {
+      } else if (e.toString().contains('FirebaseException')) {
         errorMessage = 'Database connection failed. Please try again later.';
         _hasNetworkError = true;
       }
@@ -105,7 +105,7 @@ class _UsersProfilesPageState extends State<UsersProfilesPage> {
         _isLoading = false;
       });
     }
-  }
+  }*/
 
   Future<void> _fetchFollowLists(String userId) async {
     try {
@@ -139,24 +139,7 @@ class _UsersProfilesPageState extends State<UsersProfilesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final size = MediaQuery.of(context).size;
-    final width = size.width;
-
     // Responsive values
-    double bannerHeight = width < 600
-        ? 180
-        : width < 900
-        ? 260
-        : 320;
-    double avatarRadius = width < 600
-        ? 150
-        : width < 900
-        ? 150
-        : 150;
-    double avatarImgHeight = avatarRadius * 2;
-    double cardPadding = width < 600 ? 15 : 32;
-    double maxCardWidth = width >= 900 ? double.infinity : 600;
 
     // Show immediate loading state while initializing
     if (_userProfile == null && _error == null) {
@@ -236,7 +219,8 @@ class _UsersProfilesPageState extends State<UsersProfilesPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton.icon(
-                      onPressed: _fetchUserProfile,
+                      onPressed: // _fetchUserProfile,
+                          () {},
                       icon: const Icon(Icons.refresh),
                       label: const Text('Retry'),
                     ),
@@ -333,7 +317,9 @@ class _UsersProfilesPageState extends State<UsersProfilesPage> {
               const Text('Please check your connection and try again'),
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: _fetchUserProfile,
+                onPressed: () {},
+
+                // _fetchUserProfile,
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry'),
               ),

@@ -1,24 +1,12 @@
-import 'package:mongo_dart/mongo_dart.dart';
-import 'package:everesports/database/config/config.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:everesports/core/page/auth/model/user_profile.dart';
 import 'package:everesports/service/auth/follow_service.dart';
 
 class UsersService {
-  static Db? _db;
-  static DbCollection? _usersCollection;
-
-  static Future<void> _initializeDatabase() async {
-    if (_db == null) {
-      try {
-        _db = await Db.create(configDatabase);
-        await _db!.open();
-        _usersCollection = _db!.collection('users');
-      } catch (e) {
-        print('Error connecting to database: $e');
-        rethrow;
-      }
-    }
-  }
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final CollectionReference _usersCollection = _firestore.collection(
+    'users',
+  );
 
   // Get all users with pagination for sidebar
   static Future<List<UserProfile>> getUsersForSidebar({
@@ -26,15 +14,16 @@ class UsersService {
     int skip = 0,
   }) async {
     try {
-      await _initializeDatabase();
+      final querySnapshot = await _usersCollection
+          .orderBy('createdAt', descending: true)
+          .limit(limit + skip)
+          .get();
 
-      final users = await _usersCollection!
-          .find(
-            where.sortBy('createdAt', descending: true).skip(skip).limit(limit),
-          )
+      final docs = querySnapshot.docs.skip(skip).take(limit);
+
+      return docs
+          .map((doc) => UserProfile.fromMap(doc.data() as Map<String, dynamic>))
           .toList();
-
-      return users.map((user) => UserProfile.fromMap(user)).toList();
     } catch (e) {
       print('Error getting users for sidebar: $e');
       return [];
@@ -48,14 +37,12 @@ class UsersService {
     int skip = 0,
   }) async {
     try {
-      await _initializeDatabase();
+      final querySnapshot = await _usersCollection
+          .orderBy('createdAt', descending: true)
+          .limit(limit + skip)
+          .get();
 
-      // Get all users
-      final users = await _usersCollection!
-          .find(
-            where.sortBy('createdAt', descending: true).skip(skip).limit(limit),
-          )
-          .toList();
+      final docs = querySnapshot.docs.skip(skip).take(limit);
 
       // Get following relationships for current user using FollowService
       final followingIds = await FollowService.getFollowingUserIds(
@@ -63,15 +50,15 @@ class UsersService {
       );
 
       // Combine user data with following status
-      final usersWithStatus = users.map((user) {
-        final userObjectId = user['_id'] as ObjectId;
-        final userId = userObjectId.toHexString();
+      final usersWithStatus = docs.map((doc) {
+        final user = doc.data() as Map<String, dynamic>;
+        final userId = user['userId'] as String?;
 
         // Check if current user is following this user using userId field
-        final isFollowing = followingIds.contains(user['userId']);
+        final isFollowing = userId != null && followingIds.contains(userId);
 
-        // Check if this is the current user (compare by userId field, not ObjectId)
-        final isCurrentUser = user['userId'] == currentUserId;
+        // Check if this is the current user (compare by userId field)
+        final isCurrentUser = userId == currentUserId;
 
         return {
           'user': UserProfile.fromMap(user),
@@ -111,32 +98,40 @@ class UsersService {
   // Get users by search query
   static Future<List<UserProfile>> searchUsers(String query) async {
     try {
-      await _initializeDatabase();
+      // Firestore does not support OR queries with regex directly.
+      // We'll do two separate queries and merge results.
+      final usernameQuery = await _usersCollection
+          .where('username', isGreaterThanOrEqualTo: query)
+          .where('username', isLessThanOrEqualTo: query + '\uf8ff')
+          .get();
 
-      final users = await _usersCollection!.find({
-        '\$or': [
-          {
-            'username': {'\$regex': query, '\$options': 'i'},
-          },
-          {
-            'name': {'\$regex': query, '\$options': 'i'},
-          },
-        ],
-      }).toList();
+      final nameQuery = await _usersCollection
+          .where('name', isGreaterThanOrEqualTo: query)
+          .where('name', isLessThanOrEqualTo: query + '\uf8ff')
+          .get();
 
-      return users.map((user) => UserProfile.fromMap(user)).toList();
+      final usersMap = <String, UserProfile>{};
+
+      for (var doc in usernameQuery.docs) {
+        usersMap[doc.id] = UserProfile.fromMap(
+          doc.data() as Map<String, dynamic>,
+        );
+      }
+      for (var doc in nameQuery.docs) {
+        usersMap[doc.id] = UserProfile.fromMap(
+          doc.data() as Map<String, dynamic>,
+        );
+      }
+
+      return usersMap.values.toList();
     } catch (e) {
       print('Error searching users: $e');
       return [];
     }
   }
 
-  // Close database connection
+  // No need to close Firestore connection in Flutter
   static Future<void> close() async {
-    if (_db != null) {
-      await _db!.close();
-      _db = null;
-      _usersCollection = null;
-    }
+    // No-op for Firestore
   }
 }

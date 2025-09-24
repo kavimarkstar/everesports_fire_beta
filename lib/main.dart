@@ -1,4 +1,3 @@
-import 'package:everesports/core/page/home/view/post_view.dart';
 import 'package:everesports/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +9,6 @@ import 'package:everesports/Theme/theme_provider.dart';
 import 'package:everesports/l10n/app_localizations.dart';
 import 'package:everesports/navigation/navigation.dart';
 import 'package:everesports/service/language_service.dart';
-import 'package:everesports/service/auth/auth_service.dart';
 import 'package:everesports/service/notification_service.dart';
 
 // 🔑 Global key to access app state
@@ -23,7 +21,7 @@ void main() async {
   try {
     // Initialize essential services
     await LanguageService().initialize();
-    await AuthService.init();
+
     await NotificationService().initialize();
   } catch (e) {
     debugPrint('Initialization error: $e');

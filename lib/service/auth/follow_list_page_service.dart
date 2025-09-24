@@ -1,73 +1,59 @@
-import 'package:everesports/database/config/config.dart';
-import 'package:mongo_dart/mongo_dart.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class DatabaseService {
-  static late Db _db;
-  static bool _isInitialized = false;
+class FollowListPageService {
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  static final String _connectionString = configDatabase;
-
-  // Collection names
   static const String followingCollection = 'following';
   static const String usersCollection = 'users';
 
-  // Initialize the database connection
-  static Future<void> initialize() async {
-    if (!_isInitialized) {
-      _db = Db(_connectionString);
-      await _db.open();
-      _isInitialized = true;
-    }
-  }
-
-  // Get the database instance
-  static Db get db {
-    if (!_isInitialized) {
-      throw Exception('Database not initialized. Call initialize() first.');
-    }
-    return _db;
-  }
-
-  // Close the database connection
-  static Future<void> close() async {
-    if (_isInitialized) {
-      await _db.close();
-      _isInitialized = false;
-    }
-  }
-
+  /// Get the list of users that the given user is following
   static Future<List<Map<String, dynamic>>> getUserFollowing(
     String userId,
   ) async {
-    final following = await db
-        .collection('following')
-        .find(where.eq('userId', userId))
-        .toList();
+    final followingSnapshot = await _firestore
+        .collection(followingCollection)
+        .where('userId', isEqualTo: userId)
+        .get();
+
+    final following = followingSnapshot.docs.map((doc) => doc.data()).toList();
 
     return await _enrichWithUserDetails(following, 'followingId');
   }
 
+  /// Get the list of users that are following the given user
   static Future<List<Map<String, dynamic>>> getUserFollowers(
     String userId,
   ) async {
-    final followers = await db
-        .collection('following')
-        .find(where.eq('followingId', userId))
-        .toList();
+    final followersSnapshot = await _firestore
+        .collection(followingCollection)
+        .where('followingId', isEqualTo: userId)
+        .get();
+
+    final followers = followersSnapshot.docs.map((doc) => doc.data()).toList();
 
     return await _enrichWithUserDetails(followers, 'userId');
   }
 
+  /// Helper to enrich following/follower relationships with user details
   static Future<List<Map<String, dynamic>>> _enrichWithUserDetails(
     List<Map<String, dynamic>> relationships,
     String idField,
   ) async {
     return await Future.wait(
       relationships.map((rel) async {
-        final user = await db
-            .collection('users')
-            .findOne(where.eq('_id', ObjectId.fromHexString(rel[idField])));
-        if (user == null) return rel;
+        final userId = rel[idField];
+        if (userId == null) return rel;
+
+        final userSnapshot = await _firestore
+            .collection(usersCollection)
+            .where('userId', isEqualTo: userId)
+            .limit(1)
+            .get();
+
+        if (userSnapshot.docs.isEmpty) return rel;
+
+        final user = userSnapshot.docs.first.data();
+
         return {
           'userId': user['userId'],
           'username': user['username'],
@@ -79,5 +65,5 @@ class DatabaseService {
     );
   }
 
-  // Add more database operations as needed...
+  // Add more Firestore-based operations as needed...
 }

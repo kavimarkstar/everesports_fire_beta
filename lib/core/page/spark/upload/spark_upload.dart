@@ -1,7 +1,10 @@
+import 'package:everesports/Theme/colors.dart';
 import 'package:everesports/core/auth/home/login_home.dart';
 import 'package:everesports/core/auth/services/auth_service.dart';
 import 'package:everesports/core/page/profile/service/profile_service.dart'
     hide AuthServiceFireBase;
+import 'package:everesports/responsive/responsive.dart';
+import 'package:everesports/widget/common_icon_eleveted_button.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -103,36 +106,99 @@ class _SparkUploadPageState extends State<SparkUploadPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      appBar: AppBar(title: const Text("Upload Spark")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: "Title",
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _descController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: "Description",
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 20),
-            _isLoading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: _uploadSpark,
-                    child: const Text("Upload"),
+      appBar: isMobile(context)
+          ? AppBar(title: const Text("Post Spark"))
+          : null,
+      body: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  controller: _titleController,
+                  maxLines: 2,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    hintText: "Title",
+                    filled: true,
+                    fillColor: isDarkMode
+                        ? secondBlackColor
+                        : secondWhiteGrayColor,
+
+                    hintStyle: TextStyle(
+                      color: isDarkMode ? Colors.white70 : Colors.grey[700],
+                      fontSize: 16,
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        isMobile(context) ? 8 : 8,
+                      ),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        isMobile(context) ? 8 : 8,
+                      ),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        isMobile(context) ? 8 : 8,
+                      ),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
-          ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _descController,
+                  maxLines: 8,
+                  decoration: InputDecoration(
+                    hintText: "Description",
+                    filled: true,
+                    fillColor: isDarkMode
+                        ? secondBlackColor
+                        : secondWhiteGrayColor,
+
+                    hintStyle: TextStyle(
+                      color: isDarkMode ? Colors.white70 : Colors.grey[700],
+                      fontSize: 16,
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        isMobile(context) ? 8 : 8,
+                      ),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: _isLoading
+                      ? const CircularProgressIndicator()
+                      : commoniconElevatedButtonbuild(
+                          context,
+                          "Upload",
+                          _uploadSpark,
+                          Icons.cloud_upload,
+                        ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

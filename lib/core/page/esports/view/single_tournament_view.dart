@@ -50,7 +50,7 @@ class _SingalTournamentViewPageState extends State<SingalTournamentViewPage> {
   @override
   void initState() {
     super.initState();
-    _mapsFuture = MongoEsportsService.getMaps();
+    _mapsFuture = FirebaseEsportsService.getMaps();
   }
 
   // Helper to extract ObjectId from string
@@ -222,17 +222,8 @@ class _SingalTournamentViewPageState extends State<SingalTournamentViewPage> {
                   children: [
                     CircleAvatar(
                       radius: 17,
-                      backgroundImage: widget.imagePath != null
-                          ? NetworkImage(widget.imagePath)
-                          : null,
-                      child: widget.imagePath == null
-                          ? Text(
-                              widget.tournament.gameName.isNotEmpty
-                                  ? widget.tournament.gameName[0].toUpperCase()
-                                  : '?',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            )
-                          : null,
+                      backgroundImage: NetworkImage(widget.imagePath),
+                      child: null,
                     ),
                     const SizedBox(width: 10),
                     Text(
@@ -398,7 +389,7 @@ class SingalTournamentPopUp {
             child: StatefulBuilder(
               builder: (context, setState) {
                 final Future<List<Map<String, dynamic>>> mapsFuture =
-                    MongoEsportsService.getMaps();
+                    FirebaseEsportsService.getMaps();
                 final description = item.description;
                 return SingleChildScrollView(
                   child: Column(

@@ -136,7 +136,7 @@ class _CommonProfileListviewState extends State<CommonProfileListview> {
               radius: 30,
               backgroundImage: widget.profileImageUrl != null
                   ? NetworkImage(
-                      fileServerBaseUrl + "/" + widget.profileImageUrl!,
+                      "$fileServerBaseUrl/${widget.profileImageUrl!}",
                     )
                   : AssetImage("assets/icons/profile_users.jpeg")
                         as ImageProvider,

@@ -1,17 +1,18 @@
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
-import 'auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FollowService {
-  static mongo.Db get _db => AuthService.db;
-  static mongo.DbCollection get _followingCollection =>
-      _db.collection('following');
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static CollectionReference get _followingCollection =>
+      _firestore.collection('following');
+  static CollectionReference get _usersCollection =>
+      _firestore.collection('users');
 
   static Future<void> followUser(
     String currentUserId,
     String targetUserId,
   ) async {
     final now = DateTime.now();
-    await _followingCollection.insertOne({
+    await _followingCollection.add({
       'userId': currentUserId,
       'followingId': targetUserId,
       'followedAt': now.toIso8601String(),
@@ -22,90 +23,129 @@ class FollowService {
     String currentUserId,
     String targetUserId,
   ) async {
-    await _followingCollection.deleteOne({
-      'userId': currentUserId,
-      'followingId': targetUserId,
-    });
+    final query = await _followingCollection
+        .where('userId', isEqualTo: currentUserId)
+        .where('followingId', isEqualTo: targetUserId)
+        .get();
+    for (var doc in query.docs) {
+      await doc.reference.delete();
+    }
   }
 
   static Future<bool> isFollowing(
     String currentUserId,
     String targetUserId,
   ) async {
-    final doc = await _followingCollection.findOne({
-      'userId': currentUserId,
-      'followingId': targetUserId,
-    });
-    return doc != null;
+    final query = await _followingCollection
+        .where('userId', isEqualTo: currentUserId)
+        .where('followingId', isEqualTo: targetUserId)
+        .limit(1)
+        .get();
+    return query.docs.isNotEmpty;
   }
 
   static Future<int> followersCount(String userId) async {
-    return await _followingCollection.count({'followingId': userId});
+    final query = await _followingCollection
+        .where('followingId', isEqualTo: userId)
+        .get();
+    return query.docs.length;
   }
 
   static Future<int> followingCount(String userId) async {
-    return await _followingCollection.count({'userId': userId});
+    final query = await _followingCollection
+        .where('userId', isEqualTo: userId)
+        .get();
+    return query.docs.length;
   }
 
   static Future<List<Map<String, dynamic>>> getFollowingList(
     String userId,
   ) async {
-    final followingDocs = await _followingCollection.find({
-      'userId': userId,
-    }).toList();
-    if (followingDocs.isEmpty) return [];
-    final db = _db;
-    final usersCollection = db.collection('users');
-    final followingIds = followingDocs
-        .map((doc) => doc['followingId'])
+    final followingQuery = await _followingCollection
+        .where('userId', isEqualTo: userId)
+        .get();
+    if (followingQuery.docs.isEmpty) return [];
+    final followingIds = followingQuery.docs
+        .map((doc) => doc['followingId'] as String)
         .toList();
-    final users = await usersCollection.find({
-      'userId': {'in': followingIds},
-    }).toList();
-    return users
-        .map(
-          (user) => {
-            'userId': user['userId'],
-            'username': user['username'],
-            'name': user['name'],
+
+    if (followingIds.isEmpty) return [];
+
+    // Firestore doesn't support 'in' queries with more than 10 elements
+    List<Map<String, dynamic>> users = [];
+    for (var chunk in _chunkList(followingIds, 10)) {
+      final usersQuery = await _usersCollection
+          .where('userId', whereIn: chunk)
+          .get();
+      users.addAll(
+        usersQuery.docs.map(
+          (userDoc) => {
+            'userId': userDoc['userId'],
+            'username': userDoc['username'],
+            'name': userDoc['name'],
           },
-        )
-        .toList();
+        ),
+      );
+    }
+    return users;
   }
 
   static Future<List<Map<String, dynamic>>> getFollowersList(
     String userId,
   ) async {
-    final followerDocs = await _followingCollection.find({
-      'followingId': userId,
-    }).toList();
-    if (followerDocs.isEmpty) return [];
-    final db = _db;
-    final usersCollection = db.collection('users');
-    final followerIds = followerDocs.map((doc) => doc['userId']).toList();
-    final users = await usersCollection.find({
-      'userId': {'in': followerIds},
-    }).toList();
-    return users
-        .map(
-          (user) => {
-            'userId': user['userId'],
-            'username': user['username'],
-            'name': user['name'],
-          },
-        )
+    final followersQuery = await _followingCollection
+        .where('followingId', isEqualTo: userId)
+        .get();
+    if (followersQuery.docs.isEmpty) return [];
+    final followerIds = followersQuery.docs
+        .map((doc) => doc['userId'] as String)
         .toList();
+
+    if (followerIds.isEmpty) return [];
+
+    List<Map<String, dynamic>> users = [];
+    for (var chunk in _chunkList(followerIds, 10)) {
+      final usersQuery = await _usersCollection
+          .where('userId', whereIn: chunk)
+          .get();
+      users.addAll(
+        usersQuery.docs.map(
+          (userDoc) => {
+            'userId': userDoc['userId'],
+            'username': userDoc['username'],
+            'name': userDoc['name'],
+          },
+        ),
+      );
+    }
+    return users;
   }
 
   static Future<List<String>> getFollowingUserIds(String userId) async {
-    final docs = await _followingCollection.find({'userId': userId}).toList();
-    return docs.map((doc) => doc['followingId'] as String).toList();
+    final query = await _followingCollection
+        .where('userId', isEqualTo: userId)
+        .get();
+    return query.docs.map((doc) => doc['followingId'] as String).toList();
   }
 
   static Future<List<String>> getFollowerUserIds(String userId) async {
-    final docs = await _followingCollection.find({
-      'followingId': userId,
-    }).toList();
-    return docs.map((doc) => doc['userId'] as String).toList();
+    final query = await _followingCollection
+        .where('followingId', isEqualTo: userId)
+        .get();
+    return query.docs.map((doc) => doc['userId'] as String).toList();
+  }
+
+  // Helper to chunk a list into pieces of size n (for Firestore 'in' queries)
+  static List<List<T>> _chunkList<T>(List<T> list, int chunkSize) {
+    List<List<T>> chunks = [];
+    for (var i = 0; i < list.length; i += chunkSize) {
+      chunks.add(
+        list.sublist(
+          i,
+          i + chunkSize > list.length ? list.length : i + chunkSize,
+        ),
+      );
+    }
+    return chunks;
   }
 }

@@ -1,41 +1,24 @@
-import 'package:mongo_dart/mongo_dart.dart';
-import 'package:everesports/database/config/config.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/user_profile.dart';
 
 class UserProfileService {
-  static Db? _db;
-  static DbCollection? _usersCollection;
-  static DbCollection? _followersCollection;
-  static DbCollection? _followingCollection;
-  static DbCollection? _likesCollection;
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final String _usersCollection = 'users';
+  static final String _followingCollection = 'following';
+  static final String _likesCollection = 'likes';
+  static final String _postsCollection = 'posts';
 
-  static Future<void> _initializeDatabase() async {
-    if (_db == null) {
-      try {
-        _db = await Db.create(configDatabase);
-        await _db!.open();
-        _usersCollection = _db!.collection('users');
-        _followersCollection = _db!.collection('followers');
-        _followingCollection = _db!.collection('following');
-        _likesCollection = _db!.collection('likes');
-      } catch (e) {
-        print('Error connecting to database: $e');
-        rethrow;
-      }
-    }
-  }
-
-  // Get user profile by ObjectId
-  static Future<UserProfile?> getUserProfileById(String objectIdHex) async {
+  // Get user profile by Firestore document ID
+  static Future<UserProfile?> getUserProfileById(String docId) async {
     try {
-      await _initializeDatabase();
-
-      final user = await _usersCollection!.findOne(
-        where.id(ObjectId.fromHexString(objectIdHex)),
-      );
-
-      if (user != null) {
-        return UserProfile.fromMap(user);
+      final doc = await _firestore
+          .collection(_usersCollection)
+          .doc(docId)
+          .get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        data['docId'] = doc.id;
+        return UserProfile.fromMap(data);
       }
       return null;
     } catch (e) {
@@ -44,18 +27,21 @@ class UserProfileService {
     }
   }
 
-  // Get user data by ObjectId (alternative method)
+  // Get user data by Firestore document ID (alternative method)
   static Future<Map<String, dynamic>?> getUserDataByObjectId(
-    String objectIdHex,
+    String docId,
   ) async {
     try {
-      await _initializeDatabase();
-
-      final user = await _usersCollection!.findOne(
-        where.id(ObjectId.fromHexString(objectIdHex)),
-      );
-
-      return user;
+      final doc = await _firestore
+          .collection(_usersCollection)
+          .doc(docId)
+          .get();
+      if (doc.exists) {
+        final data = doc.data()!;
+        data['docId'] = doc.id;
+        return data;
+      }
+      return null;
     } catch (e) {
       print('Error fetching user data by ObjectId: $e');
       return null;
@@ -65,12 +51,16 @@ class UserProfileService {
   // Get user profile by userId (string)
   static Future<UserProfile?> getUserProfileByUserId(String userId) async {
     try {
-      await _initializeDatabase();
+      final query = await _firestore
+          .collection(_usersCollection)
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
 
-      final user = await _usersCollection!.findOne(where.eq('userId', userId));
-
-      if (user != null) {
-        return UserProfile.fromMap(user);
+      if (query.docs.isNotEmpty) {
+        final data = query.docs.first.data();
+        data['docId'] = query.docs.first.id;
+        return UserProfile.fromMap(data);
       }
       return null;
     } catch (e) {
@@ -82,14 +72,16 @@ class UserProfileService {
   // Get user profile by username
   static Future<UserProfile?> getUserProfileByUsername(String username) async {
     try {
-      await _initializeDatabase();
+      final query = await _firestore
+          .collection(_usersCollection)
+          .where('username', isEqualTo: username)
+          .limit(1)
+          .get();
 
-      final user = await _usersCollection!.findOne(
-        where.eq('username', username),
-      );
-
-      if (user != null) {
-        return UserProfile.fromMap(user);
+      if (query.docs.isNotEmpty) {
+        final data = query.docs.first.data();
+        data['docId'] = query.docs.first.id;
+        return UserProfile.fromMap(data);
       }
       return null;
     } catch (e) {
@@ -101,9 +93,11 @@ class UserProfileService {
   // Get followers count
   static Future<int> getFollowersCount(String userId) async {
     try {
-      await _initializeDatabase();
-
-      return await _followersCollection!.count(where.eq('followingId', userId));
+      final query = await _firestore
+          .collection(_followingCollection)
+          .where('followingId', isEqualTo: userId)
+          .get();
+      return query.size;
     } catch (e) {
       print('Error getting followers count: $e');
       return 0;
@@ -113,9 +107,11 @@ class UserProfileService {
   // Get following count
   static Future<int> getFollowingCount(String userId) async {
     try {
-      await _initializeDatabase();
-
-      return await _followingCollection!.count(where.eq('userId', userId));
+      final query = await _firestore
+          .collection(_followingCollection)
+          .where('userId', isEqualTo: userId)
+          .get();
+      return query.size;
     } catch (e) {
       print('Error getting following count: $e');
       return 0;
@@ -125,22 +121,21 @@ class UserProfileService {
   // Get likes count (total likes received by user)
   static Future<int> getLikesCount(String userId) async {
     try {
-      await _initializeDatabase();
-
       // Get all posts by user
-      final posts = await _db!
-          .collection('posts')
-          .find(where.eq('userId', userId))
-          .toList();
+      final postsQuery = await _firestore
+          .collection(_postsCollection)
+          .where('userId', isEqualTo: userId)
+          .get();
 
       int totalLikes = 0;
-      for (final post in posts) {
-        final likesCount = await _likesCollection!.count(
-          where.eq('postId', post['_id'].toString()),
-        );
-        totalLikes += likesCount;
+      for (final post in postsQuery.docs) {
+        final postId = post.id;
+        final likesQuery = await _firestore
+            .collection(_likesCollection)
+            .where('postId', isEqualTo: postId)
+            .get();
+        totalLikes += likesQuery.size;
       }
-
       return totalLikes;
     } catch (e) {
       print('Error getting likes count: $e');
@@ -154,20 +149,21 @@ class UserProfileService {
     Map<String, dynamic> updates,
   ) async {
     try {
-      await _initializeDatabase();
+      // Find the user document by userId
+      final query = await _firestore
+          .collection(_usersCollection)
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
 
-      // Use modify with set operations for each field
-      final modifier = modify;
-      updates.forEach((key, value) {
-        modifier.set(key, value);
-      });
+      if (query.docs.isEmpty) {
+        print('User not found for update');
+        return false;
+      }
 
-      final result = await _usersCollection!.updateOne(
-        where.eq('userId', userId),
-        modifier,
-      );
-
-      return result.isSuccess;
+      final docId = query.docs.first.id;
+      await _firestore.collection(_usersCollection).doc(docId).update(updates);
+      return true;
     } catch (e) {
       print('Error updating user profile: $e');
       return false;
@@ -177,14 +173,30 @@ class UserProfileService {
   // Search users by username or name
   static Future<List<UserProfile>> searchUsers(String query) async {
     try {
-      await _initializeDatabase();
+      // Search by username (exact match)
+      final usernameQuery = await _firestore
+          .collection(_usersCollection)
+          .where('username', isEqualTo: query)
+          .get();
 
-      // Use simple equality search instead of regex for now
-      final users = await _usersCollection!
-          .find(where.eq('username', query))
-          .toList();
+      // Optionally, also search by name (exact match)
+      final nameQuery = await _firestore
+          .collection(_usersCollection)
+          .where('name', isEqualTo: query)
+          .get();
 
-      return users.map((user) => UserProfile.fromMap(user)).toList();
+      final users = [
+        ...usernameQuery.docs,
+        ...nameQuery.docs.where(
+          (doc) => !usernameQuery.docs.any((u) => u.id == doc.id),
+        ), // avoid duplicates
+      ];
+
+      return users.map((doc) {
+        final data = doc.data();
+        data['docId'] = doc.id;
+        return UserProfile.fromMap(data);
+      }).toList();
     } catch (e) {
       print('Error searching users: $e');
       return [];
@@ -197,30 +209,28 @@ class UserProfileService {
     int skip = 0,
   }) async {
     try {
-      await _initializeDatabase();
+      final query = await _firestore
+          .collection(_usersCollection)
+          .orderBy('createdAt', descending: true)
+          .limit(limit)
+          .get();
 
-      final users = await _usersCollection!
-          .find(
-            where.sortBy('createdAt', descending: true).skip(skip).limit(limit),
-          )
-          .toList();
+      // Firestore does not support skip/offset directly, so we slice manually
+      final docs = query.docs.skip(skip).take(limit);
 
-      return users.map((user) => UserProfile.fromMap(user)).toList();
+      return docs.map((doc) {
+        final data = doc.data();
+        data['docId'] = doc.id;
+        return UserProfile.fromMap(data);
+      }).toList();
     } catch (e) {
       print('Error getting all users: $e');
       return [];
     }
   }
 
-  // Close database connection
+  // No-op for Firestore, but kept for compatibility
   static Future<void> close() async {
-    if (_db != null) {
-      await _db!.close();
-      _db = null;
-      _usersCollection = null;
-      _followersCollection = null;
-      _followingCollection = null;
-      _likesCollection = null;
-    }
+    // No connection to close in Firestore
   }
 }

@@ -1,26 +1,29 @@
+// removed: base64 handling moved to FireBaseUserAvatar
+
 import 'package:everesports/responsive/responsive.dart';
 import 'package:everesports/widget/common_textbutton.dart';
 import 'package:everesports/widget/common_textbutton_text_only.dart';
+import 'package:everesports/widget/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:everesports/Theme/colors.dart';
 import 'package:everesports/core/page/home/model/comment.dart';
 import 'package:everesports/core/page/home/service/comment_service.dart';
-import 'package:everesports/service/auth/profile_service.dart';
-import 'package:everesports/database/config/config.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui';
 import 'package:everesports/widget/common_snackbar.dart';
-import 'package:everesports/widget/user_avatar.dart';
 import 'package:everesports/language/controller/all_language.dart';
 
 class CommentBottomSheet extends StatefulWidget {
   final String postId;
   final String postTitle;
+  final String? postOwnerId;
 
   const CommentBottomSheet({
     Key? key,
     required this.postId,
     required this.postTitle,
+    this.postOwnerId,
   }) : super(key: key);
 
   @override
@@ -34,7 +37,6 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
   bool isLoading = true;
   String? error;
   String? _currentUserId;
-  late ProfileService _profileService;
   final Map<String, Map<String, dynamic>> _userProfiles = {};
   String? _editingCommentId;
   final TextEditingController _editController = TextEditingController();
@@ -47,10 +49,6 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
   @override
   void initState() {
     super.initState();
-    _profileService = ProfileService(
-      connectionString: configDatabase,
-      serverBaseUrl: fileServerBaseUrl,
-    );
     _loadCurrentUser();
     _loadComments();
   }
@@ -83,6 +81,7 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
         error = null;
       });
 
+      // MongoDB version replaced with Firestore
       final fetchedComments = await CommentService.getCommentsForPost(
         widget.postId,
       );
@@ -123,15 +122,36 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
     for (final userId in uniqueUserIds) {
       if (userId.isNotEmpty && !_userProfiles.containsKey(userId)) {
         try {
-          final userProfile = await _profileService.fetchUserById(userId);
-          if (userProfile != null) {
-            _userProfiles[userId] = userProfile;
-          }
+          final Map<String, dynamic>? userProfile =
+              await _fetchSingleUserProfile(userId);
+          if (userProfile != null) _userProfiles[userId] = userProfile;
         } catch (e) {
           print('Error fetching user profile for $userId: $e');
         }
       }
     }
+  }
+
+  Future<Map<String, dynamic>?> _fetchSingleUserProfile(String userId) async {
+    try {
+      // Try match by 'userId' field
+      final q = await FirebaseFirestore.instance
+          .collection('users')
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
+      if (q.docs.isNotEmpty) return q.docs.first.data();
+
+      // Fallback: try document id
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
+      if (doc.exists) return doc.data();
+    } catch (e) {
+      print('fetchSingleUserProfile error: $e');
+    }
+    return null;
   }
 
   Future<void> _addComment() async {
@@ -153,13 +173,9 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
       );
 
       if (newComment != null) {
-        // Fetch user profile for the new comment
-        final userProfile = await _profileService.fetchUserById(
-          _currentUserId!,
-        );
-        if (userProfile != null) {
-          _userProfiles[_currentUserId!] = userProfile;
-        }
+        // Fetch user profile for the new comment (from Firestore)
+        final userProfile = await _fetchSingleUserProfile(_currentUserId!);
+        if (userProfile != null) _userProfiles[_currentUserId!] = userProfile;
 
         setState(() {
           comments.add(newComment);
@@ -278,11 +294,14 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // User avatar
-          UserAvatar(
-            profileImageUrl: _userProfiles[comment.userId]?['profileImageUrl'],
+          // User avatar (handles base64 or URL)
+          FireBaseUserAvatar(
             radius: 18,
+            profileImage:
+                _userProfiles[comment.userId]?['profileImageBase64'] ??
+                _userProfiles[comment.userId]?['profileImageUrl'],
           ),
+
           const SizedBox(width: 12),
           // Comment content
           Expanded(
@@ -659,9 +678,15 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
           : MediaQuery.of(context).size.height * 0.7,
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           topLeft: Radius.circular(32),
           topRight: Radius.circular(32),
+          bottomLeft: isDesktop(context)
+              ? Radius.circular(32)
+              : Radius.circular(0),
+          bottomRight: isDesktop(context)
+              ? Radius.circular(32)
+              : Radius.circular(0),
         ),
         boxShadow: [
           BoxShadow(
@@ -673,16 +698,18 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
       ),
       child: Column(
         children: [
+          SizedBox(height: 5),
           // Handle bar
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey[400],
-              borderRadius: BorderRadius.circular(2),
+          if (!isDesktop(context))
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[400],
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
           SizedBox(height: 10),
           // Header
           Row(
@@ -779,6 +806,12 @@ class _CommentBottomSheetState extends State<CommentBottomSheet> {
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(25),
                 topRight: Radius.circular(25),
+                bottomLeft: isDesktop(context)
+                    ? Radius.circular(32)
+                    : Radius.circular(0),
+                bottomRight: isDesktop(context)
+                    ? Radius.circular(32)
+                    : Radius.circular(0),
               ),
               border: Border(
                 top: BorderSide(

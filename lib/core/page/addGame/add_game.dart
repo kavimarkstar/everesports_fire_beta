@@ -1,12 +1,10 @@
 import 'package:everesports/Theme/colors.dart';
-import 'package:everesports/database/config/config.dart';
 import 'package:everesports/responsive/responsive.dart';
 import 'package:everesports/widget/common_elevated_button.dart';
 import 'package:everesports/widget/common_navigation.dart';
 import 'package:everesports/widget/common_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
 import 'package:everesports/widget/common_drop_down.dart';
 
 import 'package:everesports/language/controller/all_language.dart';
@@ -14,6 +12,7 @@ import 'user_games_list_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:everesports/core/page/addGame/service/user_games_service.dart';
 import 'package:everesports/widget/common_snackbar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AddGamePage extends StatefulWidget {
   const AddGamePage({super.key});
@@ -64,13 +63,16 @@ class _AddGamePageState extends State<AddGamePage> {
     super.dispose();
   }
 
+  /// Fetch all games from Firestore 'game_name' collection
   Future<void> _fetchGames() async {
-    // Use direct mongo_dart for game_name list (not user_games)
-    final db = await mongo.Db.create(configDatabase);
-    await db.open();
-    final coll = db.collection('game_name');
-    final games = await coll.find().toList();
-    await db.close();
+    final query = await FirebaseFirestore.instance
+        .collection('game_name')
+        .get();
+    final games = query.docs.map((doc) {
+      final data = doc.data();
+      data['_id'] = doc.id;
+      return data;
+    }).toList();
     setState(() {
       _games = games;
     });
@@ -98,6 +100,7 @@ class _AddGamePageState extends State<AddGamePage> {
       return;
     }
     if (_userId == null) return;
+
     // Check if this UID is already used for this game by any user
     final userGames = _userGames;
     final exists = userGames.any(

@@ -4,8 +4,7 @@ import 'package:everesports/core/page/cristols/cristols_buy.dart';
 import 'package:everesports/widget/common_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mongo_dart/mongo_dart.dart' as mongo;
-import 'package:everesports/database/config/config.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CristolButton extends StatefulWidget {
   const CristolButton({Key? key}) : super(key: key);
@@ -62,14 +61,14 @@ class CristolButtonState extends State<CristolButton> {
       return;
     }
     try {
-      final db = await mongo.Db.create(configDatabase);
-      await db.open();
-      final collection = db.collection('users_cristols');
-      final doc = await collection.findOne({'userId': userId});
-      await db.close();
+      // Firestore: Assume "users" collection, field "cristolAmount" or "amountCristol"
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
       setState(() {
-        // Ensure cristol amount is an integer and handle decimal values
-        final rawAmount = doc?['amountCristol'] ?? 0;
+        final data = doc.data();
+        final rawAmount = data?['cristolAmount'] ?? data?['amountCristol'] ?? 0;
         cristolAmount = rawAmount is double
             ? rawAmount.round()
             : (rawAmount is int ? rawAmount : 0);

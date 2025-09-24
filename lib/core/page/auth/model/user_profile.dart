@@ -1,7 +1,5 @@
-import 'package:mongo_dart/mongo_dart.dart';
-
 class UserProfile {
-  final String? id;
+  final String? id; // Firestore document ID
   final String? userId;
   final String? username;
   final String? name;
@@ -37,38 +35,53 @@ class UserProfile {
     this.settings,
   });
 
+  /// Create a UserProfile from a Firestore map (document snapshot data)
   factory UserProfile.fromMap(Map<String, dynamic> map) {
     return UserProfile(
-      id: map['_id'] is ObjectId
-          ? map['_id'].toHexString()
-          : map['_id']?.toString(),
+      id:
+          map['docId']?.toString() ??
+          map['id']?.toString() ??
+          map['_id']?.toString(),
       userId: map['userId']?.toString(),
       username: map['username']?.toString(),
       name: map['name']?.toString(),
       email: map['email']?.toString(),
       birthday: map['birthday']?.toString(),
       password: map['password']?.toString(),
-      profileImageUrl: map['profileImageUrl']?.toString(),
-      coverImageUrl: map['coverImageUrl']?.toString(),
+      profileImageUrl:
+          map['profileImageUrl']?.toString() ??
+          map['profileImageBase64']?.toString(),
+      coverImageUrl:
+          map['coverImageUrl']?.toString() ??
+          map['coverImageBase64']?.toString(),
       createdAt: map['createdAt'] != null
-          ? DateTime.tryParse(map['createdAt'].toString())
+          ? (map['createdAt'] is DateTime
+                ? map['createdAt']
+                : DateTime.tryParse(map['createdAt'].toString()))
           : null,
       updatedAt: map['updatedAt'] != null
-          ? DateTime.tryParse(map['updatedAt'].toString())
+          ? (map['updatedAt'] is DateTime
+                ? map['updatedAt']
+                : DateTime.tryParse(map['updatedAt'].toString()))
           : null,
       isVerified: map['isVerified'] as bool? ?? false,
       isPremium: map['isPremium'] as bool? ?? false,
-      socialLinks: map['socialLinks'] as Map<String, dynamic>? ?? {},
+      socialLinks: map['socialLinks'] is Map<String, dynamic>
+          ? map['socialLinks'] as Map<String, dynamic>
+          : {},
       interests: map['interests'] != null
-          ? List<String>.from(map['interests'])
+          ? List<String>.from(map['interests'] as List)
           : [],
-      settings: map['settings'] as Map<String, dynamic>? ?? {},
+      settings: map['settings'] is Map<String, dynamic>
+          ? map['settings'] as Map<String, dynamic>
+          : {},
     );
   }
 
+  /// Convert UserProfile to a Firestore-compatible map
   Map<String, dynamic> toMap() {
     return {
-      if (id != null) '_id': id,
+      if (id != null) 'id': id,
       if (userId != null) 'userId': userId,
       if (username != null) 'username': username,
       if (name != null) 'name': name,

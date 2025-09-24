@@ -53,13 +53,10 @@ class _LodingGridViewState extends State<LodingGridView> {
               childAspectRatio: context.gridAspectRatio,
             ),
             itemBuilder: (context, index) {
-              final item = items[index];
-              final gameData = {item.gameName.toUpperCase()};
-
               return GestureDetector(
                 onTap: () async {
                   final prefs = await SharedPreferences.getInstance();
-                  final userId = prefs.getString('userId');
+                  prefs.getString('userId');
                 },
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

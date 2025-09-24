@@ -1,5 +1,4 @@
-import 'package:everesports/core/page/esports/service/mongo_service.dart';
-import 'package:everesports/database/config/config.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class WeaponsGrisView extends StatefulWidget {
@@ -25,34 +24,32 @@ class WeaponsGrisView extends StatefulWidget {
 }
 
 class _WeaponsGrisViewState extends State<WeaponsGrisView> {
-  final MongoEsportsService mongoEsportsService = MongoEsportsService();
   late Future<List<Map<String, dynamic>?>> weaponsFuture;
 
   @override
   void initState() {
     super.initState();
-    weaponsFuture = _fetchWeapons();
+    weaponsFuture = _fetchWeaponsFromFirebase();
   }
 
-  Future<List<Map<String, dynamic>?>> _fetchWeapons() async {
+  Future<List<Map<String, dynamic>?>> _fetchWeaponsFromFirebase() async {
     List<Map<String, dynamic>?> weapons = [];
+    final firestore = FirebaseFirestore.instance;
+
     for (String weaponId in widget.weaponIds) {
       try {
-        print('Fetching weapon for ID: $weaponId');
-        Map<String, dynamic>? weapon;
-
-        // Handle both formats:
-        // 1. Raw ID string
-        // 2. "ObjectId(...)" format
-        if (weaponId.startsWith('ObjectId("')) {
-          weapon = await mongoEsportsService.getWeaponByObjectIdString(
-            weaponId,
-          );
-        } else {
-          weapon = await mongoEsportsService.getWeaponById(weaponId);
+        String id = weaponId;
+        // If the id is in ObjectId("...") format, extract the real id
+        if (id.startsWith('ObjectId("') && id.endsWith('")')) {
+          id = id.replaceAll('ObjectId("', '').replaceAll('")', '');
         }
-        print('Fetched weapon: $weapon');
-        weapons.add(weapon);
+        // Try to fetch the weapon document by id
+        final doc = await firestore.collection('weapon').doc(id).get();
+        if (doc.exists) {
+          weapons.add(doc.data());
+        } else {
+          weapons.add(null);
+        }
       } catch (e) {
         print('Error fetching weapon $weaponId: $e');
         weapons.add(null);
@@ -64,8 +61,10 @@ class _WeaponsGrisViewState extends State<WeaponsGrisView> {
   String _getFullImageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
     if (path.startsWith('http')) return path;
-    // Replace with your actual server host if different
-    return '$fileServerBaseUrl$path';
+    // For Firebase, imagePath should be a full URL or a storage path.
+    // If you use Firebase Storage, you may need to generate a download URL.
+    // For now, just return the path as is.
+    return path;
   }
 
   @override

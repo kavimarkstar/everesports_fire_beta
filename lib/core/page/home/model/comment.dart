@@ -1,5 +1,3 @@
-import 'package:mongo_dart/mongo_dart.dart';
-
 class Comment {
   final String id;
   final String userId;
@@ -19,34 +17,30 @@ class Comment {
     this.parentId,
   });
 
+  /// Factory to create a Comment from a Firestore map (document snapshot data)
   factory Comment.fromMap(Map<String, dynamic> map) {
-    String id;
-    if (map['_id'] is ObjectId) {
-      id = (map['_id'] as ObjectId).toHexString();
-    } else if (map['_id'] is String && map['_id'].startsWith('ObjectId(')) {
-      // Extract hex string from 'ObjectId("...")'
-      final match = RegExp(
-        'ObjectId\(["\']?([a-fA-F0-9]{24})["\']?\)',
-      ).firstMatch(map['_id']);
-      id = match != null ? match.group(1)! : map['_id'];
-    } else {
-      id = map['_id'].toString();
-    }
+    // Firestore document id can be in 'id', 'docId', or '_id'
+    String id =
+        map['docId']?.toString() ??
+        map['id']?.toString() ??
+        map['_id']?.toString() ??
+        '';
     return Comment(
       id: id,
       userId: map['userId'] ?? '',
       postId: map['postId'] ?? '',
       content: map['content'] ?? '',
-      createdAt: DateTime.parse(
-        map['createdAt'] ?? DateTime.now().toIso8601String(),
-      ),
-      updatedAt: DateTime.parse(
-        map['updatedAt'] ?? DateTime.now().toIso8601String(),
-      ),
+      createdAt: map['createdAt'] is DateTime
+          ? map['createdAt']
+          : DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
+      updatedAt: map['updatedAt'] is DateTime
+          ? map['updatedAt']
+          : DateTime.tryParse(map['updatedAt'] ?? '') ?? DateTime.now(),
       parentId: map['parentId'],
     );
   }
 
+  /// Convert Comment to a Firestore-compatible map
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
