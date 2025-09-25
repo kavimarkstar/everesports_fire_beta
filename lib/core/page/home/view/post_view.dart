@@ -12,6 +12,8 @@ import 'package:everesports/core/page/home/widget/image_slide_grid.dart';
 import 'package:everesports/core/page/home/widget/posts_view_loading.dart';
 import 'package:everesports/core/page/home/widget/user_avatar_posts.dart';
 import 'package:everesports/responsive/responsive.dart';
+import 'package:everesports/widget/common_elevated_button.dart';
+import 'package:everesports/widget/common_line_elevated_button.dart';
 import 'package:everesports/widget/common_navigation.dart';
 import 'package:everesports/core/page/home/view/comment_bottom_sheet.dart';
 import 'package:flutter/foundation.dart';
@@ -19,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:everesports/core/page/home/service/like_service.dart';
+import 'package:everesports/service/auth/follow_service.dart';
 
 class PostDisplayPage extends StatefulWidget {
   const PostDisplayPage({super.key});
@@ -40,6 +43,9 @@ class _PostDisplayPageState extends State<PostDisplayPage>
   final Map<String, bool> _likedByMe = {};
   final Map<String, int> _likeCounts = {};
   final Map<String, int> _commentCounts = {};
+  final Map<String, bool> _followingStatus = {};
+  final Set<String> _followingIds = <String>{};
+  String? _loadingFollowUserId;
 
   @override
   void initState() {
@@ -90,6 +96,7 @@ class _PostDisplayPageState extends State<PostDisplayPage>
         });
         await _primeLikesState(posts);
         await _primeCommentCounts(posts);
+        await _primeFollowingStatus(posts);
       }
     } catch (e) {
       if (mounted) {
@@ -108,6 +115,21 @@ class _PostDisplayPageState extends State<PostDisplayPage>
       if (!mounted) return;
       setState(() {
         _currentUserId = uid;
+      });
+      if (uid != null) {
+        await _loadFollowingIds(uid);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadFollowingIds(String uid) async {
+    try {
+      final ids = await FollowService.getFollowingUserIds(uid);
+      if (!mounted) return;
+      setState(() {
+        _followingIds
+          ..clear()
+          ..addAll(ids.map((e) => e.toString()));
       });
     } catch (_) {}
   }
@@ -144,6 +166,96 @@ class _PostDisplayPageState extends State<PostDisplayPage>
       if (!mounted) return;
       setState(() {});
     } catch (_) {}
+  }
+
+  Future<void> _primeFollowingStatus(List<Map<String, dynamic>> posts) async {
+    if (_currentUserId == null) return;
+    try {
+      final futures = posts.map((p) async {
+        final postOwnerId = (p['postOwnerId']?.toString() ?? '').trim();
+        if (postOwnerId.isEmpty || postOwnerId == _currentUserId) return;
+        final isFollowing = await _checkIfFollowing(
+          _currentUserId!,
+          postOwnerId,
+        );
+        _followingStatus[postOwnerId] = isFollowing;
+      }).toList();
+      await Future.wait(futures);
+      if (!mounted) return;
+      setState(() {});
+    } catch (_) {}
+  }
+
+  Future<bool> _checkIfFollowing(String followerId, String followingId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('following')
+          .where('userId', isEqualTo: followerId)
+          .where('followingId', isEqualTo: followingId)
+          .limit(1)
+          .get();
+      return snapshot.docs.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _toggleFollow(String postOwnerId) async {
+    if (_currentUserId == null ||
+        postOwnerId.isEmpty ||
+        postOwnerId == _currentUserId)
+      return;
+
+    try {
+      setState(() {
+        _loadingFollowUserId = postOwnerId;
+      });
+      final isCurrentlyFollowing = _followingStatus[postOwnerId] ?? false;
+
+      if (isCurrentlyFollowing) {
+        // Unfollow
+        final snapshot = await _firestore
+            .collection('following')
+            .where('userId', isEqualTo: _currentUserId)
+            .where('followingId', isEqualTo: postOwnerId)
+            .limit(1)
+            .get();
+
+        if (snapshot.docs.isNotEmpty) {
+          await _firestore
+              .collection('following')
+              .doc(snapshot.docs.first.id)
+              .delete();
+        }
+      } else {
+        // Follow
+        await _firestore.collection('following').add({
+          'userId': _currentUserId,
+          'followingId': postOwnerId,
+          'followedAt': FieldValue.serverTimestamp(),
+          'postview': false,
+        });
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _followingStatus[postOwnerId] = !isCurrentlyFollowing;
+        if (_followingStatus[postOwnerId] == true) {
+          _followingIds.add(postOwnerId);
+        } else {
+          _followingIds.remove(postOwnerId);
+        }
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling follow: $e');
+      }
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _loadingFollowUserId = null;
+      });
+    }
   }
 
   Future<void> _refreshCommentCount(String postId) async {
@@ -245,7 +357,13 @@ class _PostDisplayPageState extends State<PostDisplayPage>
       child: Column(
         children: [
           TopFilterView(
-            filters: const ['All', 'My Posts', 'With Images', 'Without Images'],
+            filters: const [
+              'All',
+              'Following',
+              'My Posts',
+              'With Images',
+              'Without Images',
+            ],
             selected: _activeFilter,
             onChanged: (f) {
               setState(() {
@@ -295,6 +413,15 @@ class _PostDisplayPageState extends State<PostDisplayPage>
 
   List<Map<String, dynamic>> _applyFilter(List<Map<String, dynamic>> input) {
     switch (_activeFilter) {
+      case 'Following':
+        if (_followingIds.isEmpty) return const [];
+        return input
+            .where(
+              (p) => _followingIds.contains(
+                (p['postOwnerId']?.toString() ?? '').trim(),
+              ),
+            )
+            .toList();
       case 'My Posts':
         final myId = _currentUserId;
         if (myId == null) return input;
@@ -380,6 +507,7 @@ class _PostDisplayPageState extends State<PostDisplayPage>
                 ),
               ),
               SizedBox(width: 10),
+              _buildFollowButton(postData),
               IconButton(
                 icon: const Icon(Icons.more_vert_outlined),
                 onPressed: () {},
@@ -518,6 +646,31 @@ class _PostDisplayPageState extends State<PostDisplayPage>
         ],
       ),
     );
+  }
+
+  Widget _buildFollowButton(Map<String, dynamic> postData) {
+    final postOwnerId = (postData['postOwnerId']?.toString() ?? '').trim();
+
+    // Don't show follow button for own posts
+    if (postOwnerId == _currentUserId || postOwnerId.isEmpty) {
+      return SizedBox.shrink();
+    }
+
+    final isFollowing = _followingStatus[postOwnerId] ?? false;
+
+    return _loadingFollowUserId == postOwnerId
+        ? commonLineElevatedButtonbuild(context, "...", () {})
+        : isFollowing
+        ? commonLineElevatedButtonbuild(
+            context,
+            "Unfollow",
+            () => _toggleFollow(postOwnerId),
+          )
+        : commonElevatedButtonFollowPostsButtonbuild(
+            context,
+            "Follow",
+            () => _toggleFollow(postOwnerId),
+          );
   }
 
   String _formatDate(dynamic date) {

@@ -68,6 +68,7 @@ class _CommentBoxState extends State<CommentBox> {
         'createdAt': DateTime.now().toIso8601String(),
         'updatedAt': DateTime.now().toIso8601String(),
         'parentId': null,
+        'sparkview': false,
       });
 
       _controller.clear();

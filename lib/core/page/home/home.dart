@@ -300,16 +300,18 @@ class _HomePageState extends State<HomePage> {
           final followedAt = userData['followedAt'] as String?;
           final isCurrentUser = userData['isCurrentUser'] as bool;
 
+          final displayName = user.name ?? user.username ?? 'Unknown User';
+          final displayHandle =
+              (user.username != null && user.username!.isNotEmpty)
+              ? '@${user.username}'
+              : null;
+
           return CommonProfileListview(
             userId:
                 user.userId ??
                 '', // Use userId field (like "00000000"), not ObjectId
-            username: isCurrentUser
-                ? '${user.username ?? user.name ?? 'Unknown User'} (You)'
-                : user.username ?? user.name ?? 'Unknown User',
-            handle: user.name != null && user.name != user.username
-                ? user.name
-                : null,
+            username: isCurrentUser ? '$displayName (You)' : displayName,
+            handle: displayHandle,
             profileImageUrl: user.profileImageUrl,
             followDate: isFollowing && followedAt != null
                 ? _formatFollowDate(followedAt)

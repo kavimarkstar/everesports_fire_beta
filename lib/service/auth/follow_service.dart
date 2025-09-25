@@ -11,11 +11,11 @@ class FollowService {
     String currentUserId,
     String targetUserId,
   ) async {
-    final now = DateTime.now();
     await _followingCollection.add({
       'userId': currentUserId,
       'followingId': targetUserId,
-      'followedAt': now.toIso8601String(),
+      'followedAt': FieldValue.serverTimestamp(),
+      'postview': false,
     });
   }
 

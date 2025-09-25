@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:everesports/Theme/colors.dart';
 import 'package:everesports/core/page/auth/users_profiles.dart';
 import 'package:everesports/database/config/config.dart';
@@ -134,18 +135,50 @@ class _CommonProfileListviewState extends State<CommonProfileListview> {
             padding: const EdgeInsets.all(4),
             child: CircleAvatar(
               radius: 30,
-              backgroundImage: widget.profileImageUrl != null
-                  ? NetworkImage(
-                      "$fileServerBaseUrl/${widget.profileImageUrl!}",
-                    )
-                  : AssetImage("assets/icons/profile_users.jpeg")
-                        as ImageProvider,
+              backgroundImage: _buildProfileImageProvider(
+                widget.profileImageUrl,
+              ),
               backgroundColor: const Color.fromARGB(255, 83, 83, 83),
             ),
           ),
         ),
       ),
     );
+  }
+
+  ImageProvider _buildProfileImageProvider(String? value) {
+    if (value == null || value.isEmpty) {
+      return const AssetImage("assets/icons/profile_users.jpeg");
+    }
+    // 1) Data URL (data:image/*;base64,....)
+    if (value.startsWith('data:image')) {
+      final commaIndex = value.indexOf(',');
+      if (commaIndex != -1 && commaIndex < value.length - 1) {
+        final base64Part = value.substring(commaIndex + 1);
+        try {
+          return MemoryImage(const Base64Decoder().convert(base64Part));
+        } catch (_) {
+          /* continue */
+        }
+      }
+    }
+    // 2) Absolute URL
+    if (value.startsWith('http://') ||
+        value.startsWith('https://') ||
+        value.contains('://')) {
+      return NetworkImage(value);
+    }
+    // 3) Try base64 decode (allowing slashes and plus characters)
+    try {
+      final bytes = const Base64Decoder().convert(value);
+      if (bytes.isNotEmpty) {
+        return MemoryImage(bytes);
+      }
+    } catch (_) {
+      /* not base64 */
+    }
+    // 4) Treat as relative path on file server
+    return NetworkImage("$fileServerBaseUrl/$value");
   }
 
   Widget _buildUserInfo() {

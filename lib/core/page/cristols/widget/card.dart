@@ -1,5 +1,10 @@
-import 'package:everesports/Theme/colors.dart';
+import 'package:everesports/core/auth/home/login_home.dart';
+import 'package:everesports/core/auth/services/auth_service.dart';
+import 'package:everesports/core/page/profile/service/profile_service.dart'
+    hide AuthServiceFireBase;
+import 'package:everesports/widget/common_snackbar.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CristolsCard extends StatefulWidget {
   const CristolsCard({super.key});
@@ -9,6 +14,78 @@ class CristolsCard extends StatefulWidget {
 }
 
 class _CristolsCardState extends State<CristolsCard> {
+  late ProfileServiceFireBase profileServicefirebase;
+  final _usernameController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    profileServicefirebase = ProfileServiceFireBase();
+    _checkSessionAndFetch();
+  }
+
+  String? _userId;
+  String? _docId;
+  Future<void> _checkSessionAndFetch() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedUserId = prefs.getString('userId');
+
+    if (savedUserId == null) {
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginHomePage()),
+      );
+      return;
+    }
+
+    _userId = savedUserId;
+
+    try {
+      final docId = await AuthServiceFireBase.getDocIdByUserId(_userId!);
+      if (docId == null) {
+        await prefs.remove('userId');
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginHomePage()),
+        );
+        return;
+      }
+
+      _docId = docId;
+      await _connectAndFetchUser(_docId!);
+    } catch (e) {
+      await prefs.remove('userId');
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginHomePage()),
+      );
+    }
+  }
+
+  Future<void> _connectAndFetchUser(String docId) async {
+    try {
+      final user = await profileServicefirebase.fetchUserById(docId);
+      if (user == null) {
+        if (!mounted) return;
+
+        return;
+      }
+
+      setState(() {
+        _usernameController.text = user['username'] ?? '';
+      });
+    } catch (e) {
+      _showError("Failed to fetch user: $e");
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    commonSnackBarbuild(context, message);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isdark = Theme.of(context).brightness == Brightness.dark;
@@ -19,109 +96,16 @@ class _CristolsCardState extends State<CristolsCard> {
         child: Card(
           child: Stack(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(15),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(5),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "EverEsports",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: mainColor,
-                            ),
-                          ),
-                          Text("Cristols"),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(15),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Image.asset("assets/image/chip-card.png", height: 45),
-                          Image.asset(
-                            "assets/image/wifi_mark_card.png",
-                            height: 60,
-                            color: isdark ? mainWhiteColor : mainBlackColor,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        "4141 4500 4500 4500",
-                        style: TextStyle(
-                          fontSize: 23,
-                          fontWeight: FontWeight.normal,
-                          letterSpacing: 5,
-                          wordSpacing: 5,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(5),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text("Kavimark"),
-                          SizedBox(width: 10),
-                          Column(
-                            children: [
-                              Text(
-                                "12/25",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                            ],
-                          ),
-                          SizedBox(
-                            width: 80,
-                            height: 50,
+              if (isdark) Image.asset('assets/images/white.png'),
+              if (!isdark) Image.asset('assets/images/black.png'),
 
-                            child: Stack(
-                              children: [
-                                Positioned(
-                                  left: 0,
-                                  child: Container(
-                                    width: 50,
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(100),
-                                      color: mainColor,
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 0,
-                                  child: Container(
-                                    width: 50,
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(100),
-                                      color: secondColor,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              Positioned(
+                left: 30,
+                right: 0,
+                bottom: 30,
+                child: Text(
+                  _usernameController.text.toString(),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.normal),
                 ),
               ),
             ],
