@@ -1,4 +1,5 @@
 import 'package:everesports/core/page/profile/profile_page.dart';
+import 'package:everesports/language/controller/all_language.dart';
 import 'package:everesports/main.dart';
 import 'package:everesports/widget/common_navigation.dart';
 import 'package:flutter/material.dart';
@@ -90,7 +91,7 @@ class _EnterPassFireBasePageState extends State<EnterPassFireBasePage> {
         }
       } else {
         setState(() {
-          _errorText = "Incorrect password.";
+          _errorText = getIncorrectpassword(context);
           _isLoading = false;
         });
       }
@@ -143,7 +144,7 @@ class _EnterPassFireBasePageState extends State<EnterPassFireBasePage> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Text(
-                        "Enter your password",
+                        getEnteryourpassword(context),
                         style: TextStyle(
                           fontFamily: "Poppins",
                           fontWeight: FontWeight.bold,
@@ -166,8 +167,9 @@ class _EnterPassFireBasePageState extends State<EnterPassFireBasePage> {
                     // Password input
                     commonTextfieldbuild(
                       context,
-                      "Password",
-                      "Password",
+                      getPassword(context),
+                      getPassword(context),
+
                       _inputController,
                     ),
 
@@ -194,7 +196,7 @@ class _EnterPassFireBasePageState extends State<EnterPassFireBasePage> {
                           height: 80,
                           child: commonLineElevatedButtonbuild(
                             context,
-                            "Forgot password",
+                            getForgotpassword(context),
                             () {
                               // TODO: Implement forgot password logic
                             },
@@ -206,7 +208,7 @@ class _EnterPassFireBasePageState extends State<EnterPassFireBasePage> {
                           height: 80,
                           child: commonElevatedButtonbuild(
                             context,
-                            "Next",
+                            getNext(context),
                             _isInputValid && !_isLoading ? _handleNext : null,
                           ),
                         ),

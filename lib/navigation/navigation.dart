@@ -130,10 +130,10 @@ class _NavigationPageState extends State<NavigationPage> {
   ];
 
   /// Returns the list of titles for navigation.
-  final List<String> titles = [
-    'Home',
+  List<String> get titles => [
+    getHome(context),
     'Spark',
-    'Tournaments',
+    getTournaments(context),
     'Notifications',
     'Profile',
     'Posts Spark',

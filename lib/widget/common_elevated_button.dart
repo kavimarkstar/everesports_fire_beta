@@ -87,3 +87,30 @@ Widget commonElevatedButtonFollowPostsButtonbuild(
     ),
   );
 }
+
+@override
+Widget commonElevatedButtonRequestbuild(
+  BuildContext context,
+  String text,
+  VoidCallback? onPressed,
+) {
+  final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  return ElevatedButton(
+    onPressed: onPressed,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: isDarkMode ? mainWhiteColor : mainBlackColor,
+      foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(250)),
+      elevation: 2,
+    ),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: isDarkMode ? mainBlackColor : mainWhiteColor,
+      ),
+    ),
+  );
+}

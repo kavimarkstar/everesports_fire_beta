@@ -1,5 +1,6 @@
 import 'package:everesports/Theme/colors.dart';
 import 'package:everesports/core/auth/sign_up/page/create_username.dart';
+import 'package:everesports/language/controller/all_language.dart';
 import 'package:everesports/widget/common_elevated_button.dart';
 import 'package:everesports/widget/common_navigation.dart';
 import 'package:everesports/widget/common_textfield_pass.dart';
@@ -108,7 +109,7 @@ class _CreatePassFireBasePageState extends State<CreatePassFireBasePage> {
                     Padding(
                       padding: const EdgeInsets.all(15),
                       child: Text(
-                        "Enter password",
+                        getForgotpassword(context),
                         style: TextStyle(
                           fontFamily: "Poppins",
                           fontWeight: FontWeight.bold,
@@ -139,7 +140,7 @@ class _CreatePassFireBasePageState extends State<CreatePassFireBasePage> {
                           height: isMobile ? 80 : 80,
                           child: commonElevatedButtonbuild(
                             context,
-                            "Next",
+                            getNext(context),
                             _isInputValid && !_isLoading ? _handleNext : null,
                           ),
                         ),

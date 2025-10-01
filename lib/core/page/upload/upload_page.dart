@@ -144,6 +144,7 @@ class _UploadPageState extends State<UploadPage> {
           'filetype': 'jpg',
           'data': imageData,
           'created_at': DateTime.now().toUtc().toIso8601String(),
+          'isPrivate': false,
           'user_id': _userId,
         });
 

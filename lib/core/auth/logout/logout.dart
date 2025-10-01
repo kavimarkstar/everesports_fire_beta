@@ -1,4 +1,5 @@
 import 'package:everesports/Theme/colors.dart';
+import 'package:everesports/language/controller/all_language.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -24,7 +25,15 @@ class LogoutButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(Icons.logout_outlined, color: mainRedColor),
-      title: Text('Logout', style: TextStyle(fontWeight: FontWeight.w500)),
+      title: Text(
+        getLogout(context),
+        style: TextStyle(
+          fontWeight: FontWeight.w500,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? mainWhiteColor
+              : mainBlackColor,
+        ),
+      ),
       onTap: () => _logout(context),
     );
   }

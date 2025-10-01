@@ -1,8 +1,14 @@
 import 'package:everesports/responsive/responsive.dart';
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 
 class AutoImageSlider extends StatefulWidget {
-  final List<String>? imageUrls;
+  /// Accepts a list of image data, which can be either:
+  /// - a base64 string (binary image data, e.g. "iVBORw0KGgoAAAANS...")
+  /// - a network URL (http/https)
+  /// The widget will auto-detect and display accordingly.
+  final List<String>? imageDataList;
   final double height;
   final Duration interval;
   final BoxFit fit;
@@ -10,7 +16,7 @@ class AutoImageSlider extends StatefulWidget {
 
   const AutoImageSlider({
     super.key,
-    this.imageUrls,
+    this.imageDataList,
     this.height = 200,
     this.interval = const Duration(seconds: 3),
     this.fit = BoxFit.cover,
@@ -29,6 +35,7 @@ class _AutoImageSliderState extends State<AutoImageSlider> {
   bool _disposed = false;
 
   static const List<String> _sampleImages = [
+    // These are network URLs for fallback
     'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=800&q=80',
@@ -38,9 +45,9 @@ class _AutoImageSliderState extends State<AutoImageSlider> {
   @override
   void initState() {
     super.initState();
-    _images = (widget.imageUrls == null || widget.imageUrls!.isEmpty)
+    _images = (widget.imageDataList == null || widget.imageDataList!.isEmpty)
         ? _sampleImages
-        : widget.imageUrls!;
+        : widget.imageDataList!;
     _interval = widget.interval;
     _pageController = PageController(initialPage: 0);
     _startAutoSlide();
@@ -68,6 +75,94 @@ class _AutoImageSliderState extends State<AutoImageSlider> {
     _disposed = true;
     _pageController.dispose();
     super.dispose();
+  }
+
+  Widget _buildImage(String data) {
+    // If the string looks like a URL, use Image.network
+    if (data.startsWith('http://') || data.startsWith('https://')) {
+      return Image.network(
+        data,
+        fit: widget.fit,
+        width: double.infinity,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded) return child;
+          return AnimatedOpacity(
+            opacity: frame == null ? 0.5 : 1,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOut,
+            child: child,
+          );
+        },
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return Center(
+            child: CircularProgressIndicator.adaptive(
+              value: progress.expectedTotalBytes != null
+                  ? progress.cumulativeBytesLoaded /
+                        (progress.expectedTotalBytes ?? 1)
+                  : null,
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) => DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceVariant,
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.broken_image_outlined,
+              color: Colors.redAccent,
+              size: 40,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Otherwise, treat as base64-encoded image data
+    try {
+      Uint8List bytes = base64Decode(data);
+      return Image.memory(
+        bytes,
+        fit: widget.fit,
+        width: double.infinity,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded) return child;
+          return AnimatedOpacity(
+            opacity: frame == null ? 0.5 : 1,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOut,
+            child: child,
+          );
+        },
+        errorBuilder: (context, error, stackTrace) => DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceVariant,
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.broken_image_outlined,
+              color: Colors.redAccent,
+              size: 40,
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      // If decoding fails, show error icon
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceVariant,
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.broken_image_outlined,
+            color: Colors.redAccent,
+            size: 40,
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -100,45 +195,8 @@ class _AutoImageSliderState extends State<AutoImageSlider> {
                 itemCount: _images.length,
                 onPageChanged: (index) => setState(() => _currentPage = index),
                 itemBuilder: (context, index) {
-                  final url = _images[index];
-                  return Image.network(
-                    url,
-                    fit: widget.fit,
-                    width: double.infinity,
-                    frameBuilder:
-                        (context, child, frame, wasSynchronouslyLoaded) {
-                          if (wasSynchronouslyLoaded) return child;
-                          return AnimatedOpacity(
-                            opacity: frame == null ? 0.5 : 1,
-                            duration: const Duration(milliseconds: 400),
-                            curve: Curves.easeOut,
-                            child: child,
-                          );
-                        },
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator.adaptive(
-                          value: progress.expectedTotalBytes != null
-                              ? progress.cumulativeBytesLoaded /
-                                    (progress.expectedTotalBytes ?? 1)
-                              : null,
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) => DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceVariant,
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.broken_image_outlined,
-                          color: Colors.redAccent,
-                          size: 40,
-                        ),
-                      ),
-                    ),
-                  );
+                  final data = _images[index];
+                  return _buildImage(data);
                 },
               ),
             ),

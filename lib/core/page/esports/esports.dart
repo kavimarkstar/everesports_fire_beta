@@ -1,11 +1,10 @@
 import 'package:everesports/Theme/colors.dart';
 import 'package:everesports/core/page/esports/model/tournament.dart';
 
-import 'package:everesports/core/page/esports/service/mongo_service.dart';
+import 'package:everesports/core/page/esports/service/service.dart';
 import 'package:everesports/core/page/esports/widget/gridview.dart';
 import 'package:everesports/core/page/esports/widget/image_slider.dart';
 import 'package:everesports/core/page/esports/widget/loding_gridview.dart';
-import 'package:everesports/database/config/config.dart';
 import 'package:everesports/responsive/responsive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -35,12 +34,22 @@ class _EsportsPageState extends State<EsportsPage> {
     "Valorant",
   ];
   String selectedFilter = "All";
+
+  // Add a ScrollController for the main page scroll
+  final ScrollController _pageScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     _tournamentsFuture = FirebaseEsportsService.getTournaments();
     _bannersFuture = FirebaseEsportsService.getBanners();
     _fetchGames();
+  }
+
+  @override
+  void dispose() {
+    _pageScrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchGames() async {
@@ -56,6 +65,19 @@ class _EsportsPageState extends State<EsportsPage> {
     });
   }
 
+  Future<void> _refreshPage() async {
+    setState(() {
+      isLoading = true;
+      _tournamentsFuture = FirebaseEsportsService.getTournaments();
+      _bannersFuture = FirebaseEsportsService.getBanners();
+    });
+    await _fetchGames();
+    await Future.delayed(const Duration(milliseconds: 300));
+    setState(() {
+      isLoading = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final isdark = Theme.of(context).brightness == Brightness.dark;
@@ -66,276 +88,307 @@ class _EsportsPageState extends State<EsportsPage> {
             : null,
         body: ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FutureBuilder<List<Map<String, dynamic>>>(
-                  future: _bannersFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const SizedBox(
-                        height: 200,
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    } else if (snapshot.hasError) {
-                      return SizedBox(
-                        height: 200,
-                        child: Center(child: Text('Error loading banners')),
-                      );
-                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const AutoImageSlider();
-                    }
-                    // Map imagePath to full URL
-                    String baseUrl = fileServerBaseUrl;
-                    final imageUrls = snapshot.data!
-                        .map(
-                          (b) => b['imagePath'] != null
-                              // ignore: prefer_interpolation_to_compose_strings
-                              ? "$baseUrl/" + b['imagePath']
-                              : null,
-                        )
-                        .whereType<String>()
-                        .toList();
-                    return AutoImageSlider(imageUrls: imageUrls);
-                  },
-                ),
+          child: RefreshIndicator(
+            onRefresh: () async {
+              await _refreshPage();
+              // After refresh, scroll to top
+              _pageScrollController.animateTo(
+                0,
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.ease,
+              );
+            },
+            child: SingleChildScrollView(
+              controller: _pageScrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _bannersFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const SizedBox(
+                          height: 200,
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      } else if (snapshot.hasError) {
+                        return SizedBox(
+                          height: 200,
+                          child: Center(child: Text('Error loading banners')),
+                        );
+                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const AutoImageSlider();
+                      }
 
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 15,
+                      final imageUrls = snapshot.data!
+                          .map((b) => b['imagePath'])
+                          .whereType<String>()
+                          .toList();
+                      return AutoImageSlider(imageDataList: imageUrls);
+                    },
                   ),
-                  child: const Text(
-                    "Tournaments",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 15,
+                    ),
+                    child: const Text(
+                      "Tournaments",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
-                SizedBox(
-                  height: 35,
-                  child: Builder(
-                    builder: (context) {
-                      // Only show scroll buttons on Windows, macOS, Linux (not web)
-                      if (!kIsWeb &&
-                          (Platform.isWindows ||
-                              Platform.isMacOS ||
-                              Platform.isLinux)) {
-                        final ScrollController scrollController =
-                            ScrollController();
-                        return Row(
-                          children: [
-                            SizedBox(width: 24),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.arrow_back_ios_new_rounded,
-                                size: 18,
-                              ),
-                              onPressed: () {
-                                scrollController.animateTo(
-                                  scrollController.offset - 120,
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.ease,
-                                );
-                              },
-                            ),
-                            Expanded(
-                              child: ListView.builder(
-                                controller: scrollController,
-                                scrollDirection: Axis.horizontal,
-                                itemCount: buttons.length,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
+                  SizedBox(
+                    height: 35,
+                    child: Builder(
+                      builder: (context) {
+                        // Only show scroll buttons on Windows, macOS, Linux (not web)
+                        if (!kIsWeb &&
+                            (Platform.isWindows ||
+                                Platform.isMacOS ||
+                                Platform.isLinux)) {
+                          final ScrollController scrollController =
+                              ScrollController();
+                          return Row(
+                            children: [
+                              SizedBox(width: 24),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  size: 18,
                                 ),
-                                itemBuilder: (context, index) {
-                                  final isSelected =
-                                      selectedFilter == buttons[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                      vertical: 1,
-                                    ),
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        backgroundColor: isSelected
-                                            ? (isdark
-                                                  ? mainWhiteColor
-                                                  : mainBlackColor)
-                                            : (isdark
-                                                  ? secondBlackColor
-                                                  : mainWhiteColor),
-                                        foregroundColor: isSelected
-                                            ? (isdark
-                                                  ? mainBlackColor
-                                                  : mainWhiteColor)
-                                            : Colors.black,
+                                onPressed: () {
+                                  scrollController.animateTo(
+                                    scrollController.offset - 120,
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.ease,
+                                  );
+                                },
+                              ),
+                              Expanded(
+                                child: ListView.builder(
+                                  controller: scrollController,
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: buttons.length,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                  itemBuilder: (context, index) {
+                                    final isSelected =
+                                        selectedFilter == buttons[index];
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 1,
                                       ),
-                                      onPressed: () async {
-                                        setState(() {
-                                          isLoading = true;
-                                          selectedFilter = buttons[index];
-                                        });
-
-                                        // Simulate a small delay for smooth loading transition
-                                        await Future.delayed(
-                                          const Duration(milliseconds: 300),
-                                        );
-
-                                        setState(() {
-                                          isLoading = false;
-                                        });
-                                      },
-                                      child: Text(
-                                        buttons[index],
-                                        style: TextStyle(
-                                          color: isSelected
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          backgroundColor: isSelected
+                                              ? (isdark
+                                                    ? mainWhiteColor
+                                                    : mainBlackColor)
+                                              : (isdark
+                                                    ? secondBlackColor
+                                                    : mainWhiteColor),
+                                          foregroundColor: isSelected
                                               ? (isdark
                                                     ? mainBlackColor
                                                     : mainWhiteColor)
-                                              : (isdark
-                                                    ? mainWhiteColor
-                                                    : mainBlackColor),
-                                          fontWeight: FontWeight.w500,
+                                              : Colors.black,
+                                        ),
+                                        onPressed: () async {
+                                          setState(() {
+                                            isLoading = true;
+                                            selectedFilter = buttons[index];
+                                          });
+
+                                          // Simulate a small delay for smooth loading transition
+                                          await Future.delayed(
+                                            const Duration(milliseconds: 300),
+                                          );
+
+                                          setState(() {
+                                            isLoading = false;
+                                          });
+
+                                          // Scroll to top after filter change
+                                          _pageScrollController.animateTo(
+                                            0,
+                                            duration: const Duration(
+                                              milliseconds: 400,
+                                            ),
+                                            curve: Curves.ease,
+                                          );
+                                        },
+                                        child: Text(
+                                          buttons[index],
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? (isdark
+                                                      ? mainBlackColor
+                                                      : mainWhiteColor)
+                                                : (isdark
+                                                      ? mainWhiteColor
+                                                      : mainBlackColor),
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                size: 18,
-                              ),
-                              onPressed: () {
-                                scrollController.animateTo(
-                                  scrollController.offset + 120,
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.ease,
-                                );
-                              },
-                            ),
-                            SizedBox(width: 24),
-                          ],
-                        );
-                      } else {
-                        return ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: buttons.length,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          itemBuilder: (context, index) {
-                            final isSelected = selectedFilter == buttons[index];
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 1,
-                              ),
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  backgroundColor: isSelected
-                                      ? (isdark
-                                            ? mainWhiteColor
-                                            : mainBlackColor)
-                                      : (isdark
-                                            ? secondBlackColor
-                                            : mainWhiteColor),
-                                  foregroundColor: isSelected
-                                      ? (isdark
-                                            ? mainBlackColor
-                                            : mainWhiteColor)
-                                      : Colors.black,
+                                    );
+                                  },
                                 ),
-                                onPressed: () async {
-                                  setState(() {
-                                    isLoading = true;
-                                    selectedFilter = buttons[index];
-                                  });
-
-                                  // Simulate a small delay for smooth loading transition
-                                  await Future.delayed(
-                                    const Duration(milliseconds: 300),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: 18,
+                                ),
+                                onPressed: () {
+                                  scrollController.animateTo(
+                                    scrollController.offset + 120,
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.ease,
                                   );
-
-                                  setState(() {
-                                    isLoading = false;
-                                  });
                                 },
-                                child: Text(
-                                  buttons[index],
-                                  style: TextStyle(
-                                    color: isSelected
+                              ),
+                              SizedBox(width: 24),
+                            ],
+                          );
+                        } else {
+                          return ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: buttons.length,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            itemBuilder: (context, index) {
+                              final isSelected =
+                                  selectedFilter == buttons[index];
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 1,
+                                ),
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    backgroundColor: isSelected
+                                        ? (isdark
+                                              ? mainWhiteColor
+                                              : mainBlackColor)
+                                        : (isdark
+                                              ? secondBlackColor
+                                              : mainWhiteColor),
+                                    foregroundColor: isSelected
                                         ? (isdark
                                               ? mainBlackColor
                                               : mainWhiteColor)
-                                        : (isdark
-                                              ? mainWhiteColor
-                                              : mainBlackColor),
-                                    fontWeight: FontWeight.w500,
+                                        : Colors.black,
+                                  ),
+                                  onPressed: () async {
+                                    setState(() {
+                                      isLoading = true;
+                                      selectedFilter = buttons[index];
+                                    });
+
+                                    // Simulate a small delay for smooth loading transition
+                                    await Future.delayed(
+                                      const Duration(milliseconds: 300),
+                                    );
+
+                                    setState(() {
+                                      isLoading = false;
+                                    });
+
+                                    // Scroll to top after filter change
+                                    _pageScrollController.animateTo(
+                                      0,
+                                      duration: const Duration(
+                                        milliseconds: 400,
+                                      ),
+                                      curve: Curves.ease,
+                                    );
+                                  },
+                                  child: Text(
+                                    buttons[index],
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? (isdark
+                                                ? mainBlackColor
+                                                : mainWhiteColor)
+                                          : (isdark
+                                                ? mainWhiteColor
+                                                : mainBlackColor),
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          );
+                        }
+                      },
+                    ),
+                  ),
+
+                  FutureBuilder<List<Tournament>>(
+                    future: _tournamentsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: LodingGridView());
+                      } else if (snapshot.hasError) {
+                        return Center(
+                          child: Text('Error: \\${snapshot.error}'),
                         );
+                      } else if (!snapshot.hasData) {
+                        return const LodingGridView();
                       }
+                      List<Tournament> tournaments = snapshot.data!;
+                      if (selectedFilter != "All") {
+                        tournaments = tournaments
+                            .where(
+                              (t) =>
+                                  t.gameName.toUpperCase() ==
+                                      selectedFilter.toUpperCase() ||
+                                  // ignore: unnecessary_null_comparison
+                                  (t.subGameMode != null &&
+                                      t.subGameMode.toUpperCase() ==
+                                          selectedFilter.toUpperCase()),
+                            )
+                            .toList();
+                      }
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 400),
+                        transitionBuilder:
+                            (Widget child, Animation<double> animation) {
+                              return FadeTransition(
+                                opacity: animation,
+                                child: child,
+                              );
+                            },
+                        child: isLoading
+                            ? LodingGridView()
+                            : EsportsGridView(
+                                key: ValueKey(
+                                  selectedFilter,
+                                ), // Important for AnimatedSwitcher to detect change
+                                tournamentsFuture: Future.value(tournaments),
+                                gameNameToData: _gameNameToData,
+                              ),
+                      );
                     },
                   ),
-                ),
-
-                FutureBuilder<List<Tournament>>(
-                  future: _tournamentsFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: LodingGridView());
-                    } else if (snapshot.hasError) {
-                      return Center(child: Text('Error: \\${snapshot.error}'));
-                    } else if (!snapshot.hasData) {
-                      return const LodingGridView();
-                    }
-                    List<Tournament> tournaments = snapshot.data!;
-                    if (selectedFilter != "All") {
-                      tournaments = tournaments
-                          .where(
-                            (t) =>
-                                t.gameName.toUpperCase() ==
-                                    selectedFilter.toUpperCase() ||
-                                // ignore: unnecessary_null_comparison
-                                (t.subGameMode != null &&
-                                    t.subGameMode.toUpperCase() ==
-                                        selectedFilter.toUpperCase()),
-                          )
-                          .toList();
-                    }
-                    return AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 400),
-                      transitionBuilder:
-                          (Widget child, Animation<double> animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: child,
-                            );
-                          },
-                      child: isLoading
-                          ? LodingGridView()
-                          : EsportsGridView(
-                              key: ValueKey(
-                                selectedFilter,
-                              ), // Important for AnimatedSwitcher to detect change
-                              tournamentsFuture: Future.value(tournaments),
-                              gameNameToData: _gameNameToData,
-                            ),
-                    );
-                  },
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

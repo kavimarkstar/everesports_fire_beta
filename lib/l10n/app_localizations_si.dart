@@ -318,4 +318,67 @@ class AppLocalizationsSi extends AppLocalizations {
 
   @override
   String get showMore => 'තවත් පෙන්වන්න';
+
+  @override
+  String get seeWhatsHappeningInTheEsportsWorldRightNow => 'eSports ලෝකයේ දැන් මොකද වෙන්නේ කියලා බලන්න.';
+
+  @override
+  String get createAccount => 'ගිණුම තනන්න';
+
+  @override
+  String get haveanaccountalready => 'දැනටමත් ගිණුමක් තිබේද?';
+
+  @override
+  String get bysigningupyouagreetoour => 'ලියාපදිංචි වීමෙන්, ඔබ අපගේ';
+
+  @override
+  String get termsofService => 'සේවා කොන්දේසි';
+
+  @override
+  String get privacyPolicy => 'රහස්යතා ප්රතිපත්තිය';
+
+  @override
+  String get and => ' සහ';
+
+  @override
+  String get cookieUse => ' කුකී භාවිතය';
+
+  @override
+  String get logout => 'පිටවීම';
+
+  @override
+  String get incorrectpassword => 'වැරදි මුරපදයකි.';
+
+  @override
+  String get enteryourpassword => 'ඔබගේ මුරපදය ඇතුළත් කරන්න';
+
+  @override
+  String get password => 'මුරපදය';
+
+  @override
+  String get forgotpassword => 'මුරපදය අමතක වුණා ද';
+
+  @override
+  String get next => 'ඊළඟ';
+
+  @override
+  String get emaildoesnotexistPleasesignup => 'විද්‍යුත් තැපෑලක් නොමැත. කරුණාකර ලියාපදිංචි වන්න.';
+
+  @override
+  String get emailisrequired => 'විද්‍යුත් තැපෑල අවශ්‍යයි';
+
+  @override
+  String get pleaseenteravalidemailaddres => 'කරණාකර වලංගු ඊතැපැල් ලිපිනයක් ඇතුළු කරන්න';
+
+  @override
+  String get email => 'විද්යුත් තැපෑල';
+
+  @override
+  String get togetstartedfirstenteryouremail => 'ආරම්භ කිරීමට, පළමුව ඔබගේ විද්‍යුත් තැපෑල ඇතුළත් කරන්න.';
+
+  @override
+  String get home => 'මුල් පිටුව';
+
+  @override
+  String get tournaments => 'තරඟාවලි';
 }

@@ -1,5 +1,8 @@
 import 'package:everesports/Theme/colors.dart';
 import 'package:everesports/core/page/esports/model/tournament.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:everesports/core/page/esports/util/responsive.dart';
 import 'package:everesports/core/page/esports/view/single_tournament_view.dart';
 import 'package:everesports/core/page/esports/widget/loding_gridview.dart';
@@ -23,6 +26,57 @@ class EsportsGridView extends StatefulWidget {
 }
 
 class _EsportsGridViewState extends State<EsportsGridView> {
+  ImageProvider _buildGameImageProvider(Map<String, dynamic>? gameData) {
+    if (gameData == null) {
+      return const AssetImage('assets/images/placeholder.png'); // Fallback
+    }
+
+    final imageBase64 = gameData['image_base64'] as String?;
+    if (imageBase64 != null && imageBase64.isNotEmpty) {
+      try {
+        return MemoryImage(base64Decode(imageBase64));
+      } catch (e) {
+        // Not a valid base64 string, fall through to check image_path
+      }
+    }
+
+    final imagePath = gameData['image_path'] as String?;
+    if (imagePath != null && imagePath.isNotEmpty) {
+      if (imagePath.startsWith('http')) {
+        return NetworkImage(imagePath);
+      }
+      // Handle relative paths
+      final baseUrl = fileServerBaseUrl.endsWith('/')
+          ? fileServerBaseUrl
+          : '$fileServerBaseUrl/';
+      final finalPath = imagePath.startsWith('/')
+          ? imagePath.substring(1)
+          : imagePath;
+      return NetworkImage('$baseUrl$finalPath');
+    }
+
+    // If no image is available
+    return const AssetImage('assets/images/placeholder.png'); // Fallback
+  }
+
+  /// Converts a binary string (e.g., "01101...") into a Uint8List.
+  Uint8List _binaryStringToBytes(String binary) {
+    // Ensure the string length is a multiple of 8 for byte conversion.
+    // Missing bits will be padded with '0', which might affect the last byte.
+    final paddedBinary = binary.padRight((binary.length + 7) ~/ 8 * 8, '0');
+    final bytes = <int>[];
+    for (int i = 0; i < paddedBinary.length; i += 8) {
+      final byteString = paddedBinary.substring(i, i + 8);
+      try {
+        bytes.add(int.parse(byteString, radix: 2));
+      } catch (e) {
+        // In case of a parsing error with a substring, add a placeholder byte.
+        bytes.add(0);
+      }
+    }
+    return Uint8List.fromList(bytes);
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Tournament>>(
@@ -67,14 +121,6 @@ class _EsportsGridViewState extends State<EsportsGridView> {
               final item = items[index];
               final gameData =
                   widget.gameNameToData[item.gameName.toUpperCase()];
-              final imagePath =
-                  gameData != null &&
-                      gameData['image_path'] != null &&
-                      gameData['image_path'].toString().isNotEmpty
-                  ? (gameData['image_path'].toString().startsWith('/')
-                        ? '$fileServerBaseUrl${gameData['image_path']}'
-                        : '$fileServerBaseUrl/${gameData['image_path']}')
-                  : null;
               return GestureDetector(
                 onTap: () async {
                   final prefs = await SharedPreferences.getInstance();
@@ -84,7 +130,7 @@ class _EsportsGridViewState extends State<EsportsGridView> {
                         ? commonNavigationbuild(
                             context,
                             SingalTournamentViewPage(
-                              imagePath: imagePath ?? '',
+                              imagePath: gameData?['image_base64'] ?? '',
                               userId: userId,
                               tournament: item,
                             ),
@@ -92,9 +138,9 @@ class _EsportsGridViewState extends State<EsportsGridView> {
                         : SingalTournamentPopUp.showSingalTournamentPopUp(
                             context,
                             title: item.title,
-                            content: item.description,
+
                             item: item,
-                            imagePath: imagePath ?? '',
+                            imagePath: gameData?['image_base64'] ?? '',
                             selectedWeapons: item.selectedWeapons,
                             selectedMap: item.selectedMap,
                           );
@@ -111,21 +157,71 @@ class _EsportsGridViewState extends State<EsportsGridView> {
                           borderRadius: BorderRadius.circular(12),
                           child: AspectRatio(
                             aspectRatio: 16 / 9,
-                            child: item.imageThumb.isNotEmpty
-                                ? Image.network(
-                                    _buildImageUrl(item.imageThumb),
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    errorBuilder:
-                                        (context, error, stackTrace) => Center(
-                                          child: Icon(
-                                            Icons.broken_image,
-                                            color: Colors.red,
-                                            size: 40,
-                                          ),
-                                        ),
-                                  )
-                                : Container(color: Colors.grey[300]),
+                            child: FutureBuilder<DocumentSnapshot>(
+                              future: item.imageThumb.isNotEmpty
+                                  ? FirebaseFirestore.instance
+                                        .collection('thumbnail')
+                                        .doc(item.imageThumb)
+                                        .get()
+                                  : null,
+                              builder: (context, thumbSnapshot) {
+                                if (thumbSnapshot.connectionState ==
+                                        ConnectionState.waiting ||
+                                    !thumbSnapshot.hasData) {
+                                  print(item.imageThumb);
+                                  return Container(color: Colors.grey[300]);
+                                }
+
+                                final thumbData =
+                                    thumbSnapshot.data!.data()
+                                        as Map<String, dynamic>?;
+                                final dynamic dataField = thumbData?['data'];
+
+                                if (dataField is String &&
+                                    dataField.isNotEmpty) {
+                                  try {
+                                    Uint8List bytes;
+                                    // Heuristic: Check if the string consists only of 0s and 1s.
+                                    if (RegExp(
+                                      r'^[01]+$',
+                                    ).hasMatch(dataField)) {
+                                      // It's a binary string, parse it.
+                                      bytes = _binaryStringToBytes(dataField);
+                                    } else {
+                                      // Assume it's Base64 and decode it.
+                                      bytes = base64Decode(dataField);
+                                    }
+                                    return Image.memory(
+                                      bytes,
+                                      key: ValueKey(item.imageThumb),
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return const Center(
+                                              child: Icon(
+                                                Icons.broken_image,
+                                                color: Colors.red,
+                                                size: 40,
+                                              ),
+                                            );
+                                          },
+                                    );
+                                  } catch (e) {
+                                    // This will catch errors from both binary parsing and base64 decoding.
+                                    // The widget will then fall through to the error icon below.
+                                  }
+                                }
+
+                                return const Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: Colors.red,
+                                    size: 40,
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
 
@@ -134,34 +230,19 @@ class _EsportsGridViewState extends State<EsportsGridView> {
                           right: 10,
                           child: Container(
                             decoration: BoxDecoration(
-                              color:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.black.withOpacity(0.2)
-                                  : Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(150),
-                              border: Border.all(
-                                color:
-                                    Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white.withOpacity(0.13)
-                                    : Colors.black.withOpacity(0.08),
-                                width: 1.3,
-                              ),
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(500),
+
                               boxShadow: [
                                 BoxShadow(
-                                  color:
-                                      Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? Colors.black.withOpacity(0.18)
-                                      : Colors.grey.withOpacity(0.10),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 6),
+                                  color: Colors.black.withOpacity(0.01),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 5),
                                 ),
                               ],
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.all(8.0),
+                              padding: const EdgeInsets.all(3),
                               child: Row(
                                 children: [
                                   const SizedBox(width: 10),
@@ -171,7 +252,7 @@ class _EsportsGridViewState extends State<EsportsGridView> {
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
+                                      horizontal: 7,
                                     ),
                                     child: Text(
                                       item.rewardPrizeUSD,
@@ -201,7 +282,8 @@ class _EsportsGridViewState extends State<EsportsGridView> {
                                                       context,
                                                       SingalTournamentViewPage(
                                                         imagePath:
-                                                            imagePath ?? '',
+                                                            gameData?['image_path'] ??
+                                                            '',
                                                         userId: userId,
                                                         tournament: item,
                                                       ),
@@ -209,10 +291,11 @@ class _EsportsGridViewState extends State<EsportsGridView> {
                                                   : SingalTournamentPopUp.showSingalTournamentPopUp(
                                                       context,
                                                       title: item.title,
-                                                      content: item.description,
+
                                                       item: item,
                                                       imagePath:
-                                                          imagePath ?? '',
+                                                          gameData?['image_path'] ??
+                                                          '',
                                                       selectedWeapons:
                                                           item.selectedWeapons,
                                                       selectedMap:
@@ -253,12 +336,14 @@ class _EsportsGridViewState extends State<EsportsGridView> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           CircleAvatar(
-                            radius: 25,
-                            backgroundImage: imagePath != null
-                                ? NetworkImage(imagePath)
-                                : null,
-                            child: imagePath == null
+                            backgroundColor: Colors.transparent,
+                            radius: 20,
+                            backgroundImage: _buildGameImageProvider(gameData),
+                            child:
+                                gameData?['image_base64'] == null &&
+                                    gameData?['image_path'] == null
                                 ? Text(
+                                    // Show initial only if there is no image
                                     item.gameName.isNotEmpty
                                         ? item.gameName[0].toUpperCase()
                                         : '?',
@@ -295,16 +380,6 @@ class _EsportsGridViewState extends State<EsportsGridView> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                if (item.createdAt != null) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Created: ${item.createdAt!.toLocal().toString().split(".")[0]}',
-                                    style: TextStyle(
-                                      color: Colors.grey[500],
-                                      fontSize: 11,
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
                           ),
@@ -324,16 +399,5 @@ class _EsportsGridViewState extends State<EsportsGridView> {
         );
       },
     );
-  }
-
-  String _buildImageUrl(String imageThumb) {
-    final thumb = imageThumb;
-    if (fileServerBaseUrl.endsWith('/') && thumb.startsWith('/')) {
-      return fileServerBaseUrl + thumb.substring(1);
-    } else if (!fileServerBaseUrl.endsWith('/') && !thumb.startsWith('/')) {
-      return '$fileServerBaseUrl/$thumb';
-    } else {
-      return '$fileServerBaseUrl$thumb';
-    }
   }
 }

@@ -9,27 +9,32 @@ Widget commonLineElevatedButtonbuild(
 ) {
   final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
   return Padding(
-    padding: const EdgeInsets.all(15),
-    child: ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(250)),
-        side: BorderSide(
-          color: isDarkMode ? mainWhiteColor : mainBlackColor,
-          width: 2,
+    padding: const EdgeInsets.all(5),
+    child: SizedBox(
+      height: 30,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(250),
+          ),
+          side: BorderSide(
+            color: isDarkMode ? mainWhiteColor : mainBlackColor,
+            width: 2,
+          ),
+          elevation: 0,
+          shadowColor: Colors.black12,
         ),
-        elevation: 0,
-        shadowColor: Colors.black12,
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: isDarkMode ? mainWhiteColor : mainBlackColor,
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isDarkMode ? mainWhiteColor : mainBlackColor,
+          ),
         ),
       ),
     ),

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:everesports/Theme/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:dropdown_search/dropdown_search.dart';
@@ -43,17 +45,33 @@ class GameDropdown extends StatelessWidget {
       popupProps: PopupProps.menu(
         showSearchBox: true,
         itemBuilder: (context, g, isSelected) {
-          final String imageUrl =
-              g['image_path'] != null && g['image_path'].toString().isNotEmpty
-              ? (g['image_path'].toString().startsWith('/')
-                    ? '$fileServerBaseUrl${g['image_path']}'
-                    : '$fileServerBaseUrl/${g['image_path']}')
-              : '';
+          // Use image_base64 if available, otherwise fallback to image_path
+          Widget imageWidget;
+          if (g['image_base64'] != null &&
+              g['image_base64'].toString().isNotEmpty) {
+            imageWidget = ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.memory(
+                // Decode base64 to bytes
+                base64Decode(g['image_base64']),
+                height: 30,
+                fit: BoxFit.cover,
+              ),
+            );
+          } else {
+            final String imageUrl =
+                g['image_path'] != null && g['image_path'].toString().isNotEmpty
+                ? (g['image_path'].toString().startsWith('/')
+                      ? '$fileServerBaseUrl${g['image_path']}'
+                      : '$fileServerBaseUrl/${g['image_path']}')
+                : '';
+            imageWidget = ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.network(imageUrl, height: 30, fit: BoxFit.cover),
+            );
+          }
           return ListTile(
-            leading: ClipRRect(
-              borderRadius: BorderRadiusGeometry.circular(6),
-              child: Image.network(imageUrl, height: 30),
-            ),
+            leading: imageWidget,
             title: Text(
               g['name'] ?? '',
               style: TextStyle(
@@ -67,17 +85,36 @@ class GameDropdown extends StatelessWidget {
       ),
       dropdownBuilder: (context, g) {
         if (g == null) return Text(hint);
-        final String imageUrl =
-            g['image_path'] != null && g['image_path'].toString().isNotEmpty
-            ? (g['image_path'].toString().startsWith('/')
-                  ? '$fileServerBaseUrl${g['image_path']}'
-                  : '$fileServerBaseUrl/${g['image_path']}')
-            : '';
+        // Use image_base64 if available, otherwise fallback to image_path
+        Widget imageWidget;
+        if (g['image_base64'] != null &&
+            g['image_base64'].toString().isNotEmpty) {
+          imageWidget = ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.memory(
+              // Decode base64 to bytes
+              base64Decode(g['image_base64']),
+              height: 30,
+              fit: BoxFit.cover,
+            ),
+          );
+        } else {
+          final String imageUrl =
+              g['image_path'] != null && g['image_path'].toString().isNotEmpty
+              ? (g['image_path'].toString().startsWith('/')
+                    ? '$fileServerBaseUrl${g['image_path']}'
+                    : '$fileServerBaseUrl/${g['image_path']}')
+              : '';
+          imageWidget = ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.network(imageUrl, height: 30, fit: BoxFit.cover),
+          );
+        }
         return Row(
           children: [
             ClipRRect(
               borderRadius: BorderRadiusGeometry.circular(6),
-              child: Image.network(imageUrl, height: 30),
+              child: imageWidget,
             ),
 
             SizedBox(width: 12),

@@ -22,6 +22,7 @@ class LikeService {
           'userId': userId,
           'postId': postId,
           'postOwnerId': postOwnerId,
+          'likeViewed': false,
           'createdAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
         return true; // Post is now liked

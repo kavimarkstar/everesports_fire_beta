@@ -13,7 +13,6 @@ import 'package:everesports/core/page/home/widget/posts_view_loading.dart';
 import 'package:everesports/core/page/home/widget/user_avatar_posts.dart';
 import 'package:everesports/responsive/responsive.dart';
 import 'package:everesports/widget/common_elevated_button.dart';
-import 'package:everesports/widget/common_line_elevated_button.dart';
 import 'package:everesports/widget/common_navigation.dart';
 import 'package:everesports/core/page/home/view/comment_bottom_sheet.dart';
 import 'package:flutter/foundation.dart';
@@ -33,10 +32,13 @@ class PostDisplayPage extends StatefulWidget {
 class _PostDisplayPageState extends State<PostDisplayPage>
     with WidgetsBindingObserver {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ScrollController _scrollController = ScrollController();
 
   Size? _lastSize;
   List<Map<String, dynamic>>? _cachedPosts;
   bool _loading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true; // Indicates if more pages are available
   String? _error;
   String _activeFilter = 'All';
   String? _currentUserId;
@@ -46,17 +48,21 @@ class _PostDisplayPageState extends State<PostDisplayPage>
   final Map<String, bool> _followingStatus = {};
   final Set<String> _followingIds = <String>{};
   String? _loadingFollowUserId;
+  final Map<String, bool> _savedByMe = {}; // bookmark state per postId
+  DocumentSnapshot? _lastPostDoc; // For Firestore pagination
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadUserId().then((_) => _fetchPosts());
+    _scrollController.addListener(_onScroll);
+    _loadUserId().then((_) => _fetchPosts(reset: true));
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -82,29 +88,94 @@ class _PostDisplayPageState extends State<PostDisplayPage>
     _lastSize = newSize;
   }
 
-  Future<void> _fetchPosts() async {
+  Future<void> _fetchPosts({bool reset = false}) async {
+    if (reset) {
+      if (!mounted) return;
+      setState(() {
+        _loading = true;
+        _error = null;
+        _cachedPosts = <Map<String, dynamic>>[];
+        _lastPostDoc = null;
+        _hasMore = true;
+      });
+    }
+
+    await _fetchNextPage();
+  }
+
+  Future<void> _fetchNextPage() async {
+    if (!_hasMore || _isLoadingMore) return;
+
+    if (!mounted) return;
     setState(() {
-      _loading = true;
+      _isLoadingMore = true;
       _error = null;
     });
+
     try {
-      final posts = await fetchPostsWithImages();
-      if (mounted) {
+      Query<Map<String, dynamic>> query = _firestore
+          .collection('posts')
+          .orderBy('uploadDate', descending: true)
+          .limit(3);
+
+      if (_lastPostDoc != null) {
+        query = query.startAfterDocument(_lastPostDoc!);
+      }
+
+      final QuerySnapshot<Map<String, dynamic>> snapshot = await query.get();
+
+      if (snapshot.docs.isEmpty) {
+        if (!mounted) return;
         setState(() {
-          _cachedPosts = posts;
-          _loading = false;
+          _hasMore = false;
         });
-        await _primeLikesState(posts);
-        await _primeCommentCounts(posts);
-        await _primeFollowingStatus(posts);
+      } else {
+        _lastPostDoc = snapshot.docs.last;
+        // Filter out posts that are marked private. Some posts may use
+        // the legacy 'isprivert' boolean field; check both.
+        final publicDocs = snapshot.docs.where((d) {
+          final data = d.data();
+          final isPrivate =
+              (data['isPrivate'] == true) || (data['isprivert'] == true);
+          return !isPrivate;
+        }).toList();
+
+        final newPosts = await _mapDocsToPosts(publicDocs);
+
+        if (!mounted) return;
+        setState(() {
+          (_cachedPosts ??= <Map<String, dynamic>>[]).addAll(newPosts);
+        });
+
+        if (!mounted) return;
+        await _primeLikesState(newPosts);
+        if (!mounted) return;
+        await _primeCommentCounts(newPosts);
+        if (!mounted) return;
+        await _primeSavedState(newPosts);
+        if (!mounted) return;
+        await _primeFollowingStatus(newPosts);
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _loading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _isLoadingMore = false;
+      });
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    if (maxScroll - currentScroll <= 300) {
+      _fetchNextPage();
     }
   }
 
@@ -268,62 +339,157 @@ class _PostDisplayPageState extends State<PostDisplayPage>
     } catch (_) {}
   }
 
-  Future<List<Map<String, dynamic>>> fetchPostsWithImages() async {
-    QuerySnapshot postsSnapshot = await _firestore
-        .collection('posts')
-        .orderBy('uploadDate', descending: true)
-        .get();
+  Future<List<Map<String, dynamic>>> _mapDocsToPosts(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) async {
+    List<Future<Map<String, dynamic>>> postFutures = docs.map((doc) async {
+      final postData = doc.data();
+      final images = (postData['images'] ?? []) as List;
 
-    List<Future<Map<String, dynamic>>> postFutures = postsSnapshot.docs.map((
-      doc,
-    ) async {
-      var postData = doc.data() as Map<String, dynamic>;
-      List images = postData['images'] ?? [];
-
-      List<Future<String?>> imageFutures = images.map((image) async {
-        String? fileId = image['files_id'];
+      final imageFutures = images.map((image) async {
+        final String? fileId = image['files_id'];
         if (fileId == null) return null;
-        QuerySnapshot photoSnapshot = await _firestore
+        final photoSnapshot = await _firestore
             .collection('photos')
             .where('files_id', isEqualTo: fileId)
             .limit(1)
             .get();
-
         if (photoSnapshot.docs.isNotEmpty) {
-          var photoData =
-              photoSnapshot.docs.first.data() as Map<String, dynamic>;
-          return photoData['data'] as String?;
+          final photoData = photoSnapshot.docs.first.data();
+          final dynamic data = photoData['data'];
+          if (data is String) {
+            return data;
+          }
+          // Log or handle cases where data is not a string
+          return null;
         }
         return null;
       }).toList();
 
-      List<String?> imageDataList = await Future.wait(imageFutures);
+      final imageDataList = await Future.wait(imageFutures);
       imageDataList.removeWhere((e) => e == null);
 
       Map<String, dynamic> authorData = {};
       if (postData['userId'] != null) {
-        QuerySnapshot userSnapshot = await _firestore
+        final userSnapshot = await _firestore
             .collection('users')
             .where('userId', isEqualTo: postData['userId'])
             .limit(1)
             .get();
-
         if (userSnapshot.docs.isNotEmpty) {
-          authorData = userSnapshot.docs.first.data() as Map<String, dynamic>;
+          authorData = userSnapshot.docs.first.data();
         }
       }
 
       return {
-        "id": doc.id,
-        "description": postData['description'] ?? '',
-        "uploadDate": postData['uploadDate'] ?? '',
-        "images": imageDataList,
-        "author": authorData,
-        "postOwnerId": (postData['userId'] ?? authorData['userId'])?.toString(),
+        'id': doc.id,
+        'description': postData['description'] ?? '',
+        'uploadDate': postData['uploadDate'] ?? '',
+        'images': imageDataList,
+        'author': authorData,
+        'postOwnerId': (postData['userId'] ?? authorData['userId'])?.toString(),
       };
     }).toList();
 
     return await Future.wait(postFutures);
+  }
+
+  Future<void> _primeSavedState(List<Map<String, dynamic>> posts) async {
+    if (_currentUserId == null || posts.isEmpty) return;
+    try {
+      final List<String> postIds = posts
+          .map((p) => (p['id']?.toString() ?? '').trim())
+          .where((id) => id.isNotEmpty)
+          .toList();
+      if (postIds.isEmpty) return;
+
+      // Initialize all posts as not saved first
+      for (final postId in postIds) {
+        _savedByMe[postId] = false;
+      }
+
+      // Use the 'bookmark' collection for saved/bookmarked posts to match
+      // the toggle implementation which writes to 'bookmark'.
+      final snapshot = await _firestore
+          .collection('bookmark')
+          .where('userId', isEqualTo: _currentUserId)
+          .where('postId', whereIn: postIds)
+          .get();
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final postId = (data['postId']?.toString() ?? '').trim();
+        if (postId.isNotEmpty) {
+          _savedByMe[postId] = true;
+        }
+      }
+      if (mounted) setState(() {});
+    } catch (e) {
+      // If whereIn fails (e.g., too many items), fall back to individual queries
+      try {
+        final List<String> postIds = posts
+            .map((p) => (p['id']?.toString() ?? '').trim())
+            .where((id) => id.isNotEmpty)
+            .toList();
+
+        // Initialize all as not saved
+        for (final postId in postIds) {
+          _savedByMe[postId] = false;
+        }
+
+        // Check each post individually against the 'bookmark' collection
+        final futures = postIds.map((postId) async {
+          final snapshot = await _firestore
+              .collection('bookmark')
+              .where('userId', isEqualTo: _currentUserId)
+              .where('postId', isEqualTo: postId)
+              .limit(1)
+              .get();
+          if (snapshot.docs.isNotEmpty) {
+            _savedByMe[postId] = true;
+          }
+        });
+
+        await Future.wait(futures);
+        if (mounted) setState(() {});
+      } catch (e2) {
+        // Final fallback - just log the error
+        if (kDebugMode) {
+          print('Error loading saved state: $e2');
+        }
+      }
+    }
+  }
+
+  Future<void> _toggleSave(String postId) async {
+    if (_currentUserId == null || postId.isEmpty) return;
+    final currentlySaved = _savedByMe[postId] ?? false;
+    try {
+      if (currentlySaved) {
+        final snapshot = await _firestore
+            .collection('bookmark')
+            .where('userId', isEqualTo: _currentUserId)
+            .where('postId', isEqualTo: postId)
+            .limit(1)
+            .get();
+        if (snapshot.docs.isNotEmpty) {
+          await _firestore
+              .collection('bookmark')
+              .doc(snapshot.docs.first.id)
+              .delete();
+        }
+      } else {
+        await _firestore.collection('bookmark').add({
+          'userId': _currentUserId,
+          'postId': postId,
+          'savedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      if (!mounted) return;
+      setState(() {
+        _savedByMe[postId] = !currentlySaved;
+      });
+    } catch (_) {}
   }
 
   @override
@@ -332,13 +498,20 @@ class _PostDisplayPageState extends State<PostDisplayPage>
       return SizedBox(
         height: MediaQuery.of(context).size.height,
         child: Center(
-          child: ListView.builder(
-            itemCount: 10,
-            itemBuilder: (context, index) {
-              return Column(
-                children: [lodingBuildbuild(context), PostsViewLoading()],
-              );
-            },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(height: 5),
+              lodingBuildbuild(context),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: 10,
+                  itemBuilder: (context, index) {
+                    return Center(child: PostsViewLoading());
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -373,9 +546,22 @@ class _PostDisplayPageState extends State<PostDisplayPage>
           ),
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: EdgeInsets.only(bottom: getResponsiveSpacing(context)),
-              itemCount: posts.length,
+              itemCount: posts.length + (_isLoadingMore ? 1 : 0),
               itemBuilder: (context, index) {
+                if (index >= posts.length) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  );
+                }
                 return Padding(
                   padding: EdgeInsets.only(
                     bottom: getResponsiveSpacing(context),
@@ -637,9 +823,18 @@ class _PostDisplayPageState extends State<PostDisplayPage>
               const Spacer(),
               postActionBookmarkButton(
                 context,
-                "assets/icons/bookmark.png",
+                (_savedByMe[(postData['id']?.toString() ?? '').trim()] ?? false)
+                    ? "assets/icons/bookmarked.png"
+                    : "assets/icons/bookmark.png",
                 "",
-                () => "",
+                () {
+                  final postId = (postData['id']?.toString() ?? '').trim();
+                  _toggleSave(postId);
+                },
+                // Pass the saved state so the button can render highlighted when bookmarked
+                isLiked:
+                    (_savedByMe[(postData['id']?.toString() ?? '').trim()] ??
+                    false),
               ),
             ],
           ),
@@ -659,13 +854,9 @@ class _PostDisplayPageState extends State<PostDisplayPage>
     final isFollowing = _followingStatus[postOwnerId] ?? false;
 
     return _loadingFollowUserId == postOwnerId
-        ? commonLineElevatedButtonbuild(context, "...", () {})
+        ? SizedBox.shrink()
         : isFollowing
-        ? commonLineElevatedButtonbuild(
-            context,
-            "Unfollow",
-            () => _toggleFollow(postOwnerId),
-          )
+        ? SizedBox.shrink()
         : commonElevatedButtonFollowPostsButtonbuild(
             context,
             "Follow",

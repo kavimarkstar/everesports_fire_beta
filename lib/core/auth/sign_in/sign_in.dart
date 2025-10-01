@@ -1,6 +1,7 @@
 import 'package:everesports/Theme/colors.dart';
 import 'package:everesports/core/auth/services/auth_service.dart';
 import 'package:everesports/core/auth/sign_in/page/enter_pass_page.dart';
+import 'package:everesports/language/controller/all_language.dart';
 import 'package:everesports/widget/common_elevated_button.dart';
 import 'package:everesports/widget/common_line_elevated_button.dart';
 import 'package:everesports/widget/common_navigation.dart';
@@ -61,7 +62,7 @@ class _SignInFireBaseState extends State<SignInFireBase> {
       if (_emailError != null) {
         commonSnackBarbuild(context, _emailError!);
       } else if (!_emailExists) {
-        commonSnackBarbuild(context, "Email does not exist. Please sign up.");
+        commonSnackBarbuild(context, getEmaildoesnotexistPleasesignup(context));
       }
       return;
     }
@@ -83,13 +84,14 @@ class _SignInFireBaseState extends State<SignInFireBase> {
   }
 
   String? emailValidator(String email) {
-    if (email.isEmpty) return 'Email is required';
+    if (email.isEmpty) return getEmailisrequired(context);
 
-    final pattern = r'^[\w\.-]+@(?:gmail\.com|outlook\.com)$';
+    // Accept any email format (basic validation)
+    final pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$';
     final regExp = RegExp(pattern);
 
     if (!regExp.hasMatch(email)) {
-      return 'Only @gmail.com or @outlook.com emails are allowed';
+      return getPleaseenteravalidemailaddress(context);
     }
 
     return null; // valid
@@ -138,7 +140,7 @@ class _SignInFireBaseState extends State<SignInFireBase> {
                     Padding(
                       padding: const EdgeInsets.all(15),
                       child: Text(
-                        "To get started, first enter your phone, email, or username",
+                        getTogetstartedfirstenteryouremail(context),
                         style: TextStyle(
                           fontFamily: "Poppins",
                           fontWeight: FontWeight.bold,
@@ -154,8 +156,8 @@ class _SignInFireBaseState extends State<SignInFireBase> {
                       children: [
                         commonTextfieldEmailbuild(
                           context,
-                          "Email",
-                          "Phone, Email, or Username",
+                          getEmail(context),
+                          getEmail(context),
                           _emailController,
                         ),
                         if (_emailError != null)
@@ -175,8 +177,8 @@ class _SignInFireBaseState extends State<SignInFireBase> {
                             _emailController.text.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(top: 4, left: 15),
-                            child: const Text(
-                              "Email does not exist. Please sign up.",
+                            child: Text(
+                              getEmaildoesnotexistPleasesignup(context),
                               style: TextStyle(
                                 color: Colors.red,
                                 fontSize: 13,
@@ -200,7 +202,7 @@ class _SignInFireBaseState extends State<SignInFireBase> {
                           height: isMobile ? 80 : 80,
                           child: commonLineElevatedButtonbuild(
                             context,
-                            "Forgot password",
+                            getForgotpassword(context),
                             () {
                               // Add forgot password action here
                             },
@@ -212,7 +214,7 @@ class _SignInFireBaseState extends State<SignInFireBase> {
                           height: isMobile ? 80 : 80,
                           child: commonElevatedButtonbuild(
                             context,
-                            "Next",
+                            getNext(context),
                             _isInputValid && !_isLoading ? _handleNext : null,
                           ),
                         ),

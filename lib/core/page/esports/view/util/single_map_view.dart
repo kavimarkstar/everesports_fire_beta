@@ -1,14 +1,26 @@
 import 'package:everesports/Theme/colors.dart';
-import 'package:everesports/database/config/config.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'dart:convert';
 
 Widget buildSingleMapView(
   BuildContext context,
   String title,
-  String imagePath,
+  String imageBase64,
 ) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
+
+  ImageProvider? _getImageProvider(String base64) {
+    if (base64.isNotEmpty) {
+      try {
+        return MemoryImage(base64Decode(base64));
+      } catch (e) {
+        // If base64 is invalid, fallback to a placeholder
+        return const AssetImage('assets/images/placeholder.png');
+      }
+    }
+    return const AssetImage('assets/images/placeholder.png');
+  }
 
   return Padding(
     padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
@@ -26,8 +38,8 @@ Widget buildSingleMapView(
             child: Stack(
               fit: StackFit.expand,
               children: [
-                Image.network(
-                  "$fileServerBaseUrl$imagePath",
+                Image(
+                  image: _getImageProvider(imageBase64)!,
                   fit: BoxFit.cover,
                   color: isDark
                       ? Colors.black.withOpacity(0.25)

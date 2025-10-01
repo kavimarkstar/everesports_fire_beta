@@ -69,10 +69,10 @@ Widget postActionBookmarkButton(
         icon: Image.asset(
           icon,
           height: 30,
+          // When bookmarked (isLiked) tint with mainColor to make it visually distinct.
+          // Otherwise use default color depending on theme.
           color: isLiked
-              ? isDarkMode
-                    ? mainWhiteColor
-                    : mainBlackColor
+              ? mainColor
               : (isDarkMode ? mainWhiteColor : mainBlackColor),
         ),
       ),

@@ -54,9 +54,9 @@ class _TopFilterViewState extends State<TopFilterView> {
   Widget build(BuildContext context) {
     final bool isDesktopScreen = isDesktop(context);
     return SizedBox(
-      height: 40,
+      height: 50,
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: isMobile(context) ? 5 : 15),
+        padding: EdgeInsets.symmetric(horizontal: isMobile(context) ? 4 : 15),
         child: Row(
           children: [
             if (isDesktopScreen)
@@ -105,19 +105,31 @@ class _TopFilterViewState extends State<TopFilterView> {
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: selected
-              ? Theme.of(context).colorScheme.primary
-              : (isDark ? const Color(0xff171717) : const Color(0xfff2f2f2)),
+              ? (isDark ? mainWhiteColor : mainBlackColor)
+              : (isDark ? secondBlackColor : mainWhiteColor),
           foregroundColor: selected
-              ? Colors.white
-              : Theme.of(context).colorScheme.onPrimary,
+              ? (isDark ? mainBlackColor : mainWhiteColor)
+              : Colors.black,
+
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           elevation: 2,
-          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+          textStyle: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            color: selected
+                ? (isDark ? mainBlackColor : mainWhiteColor)
+                : (isDark ? mainWhiteColor : mainBlackColor),
+          ),
         ),
         child: Text(
           label,
-          style: TextStyle(color: isDark ? mainWhiteColor : mainBlackColor),
+          style: TextStyle(
+            color: selected
+                ? (isDark ? mainBlackColor : mainWhiteColor)
+                : (isDark ? mainWhiteColor : mainBlackColor),
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );
@@ -139,6 +151,7 @@ Widget lodingBuildbuild(BuildContext context) {
           return Padding(
             padding: const EdgeInsets.all(4),
             child: Container(
+              width: isMobile(context) ? 100 : 100,
               decoration: BoxDecoration(
                 color: isDark
                     ? const Color(0xff171717)

@@ -205,5 +205,50 @@ String getCreateAlbum(BuildContext context) =>
     AppLocalizations.of(context)?.createAlbum ?? '';
 String getShowLess(BuildContext context) =>
     AppLocalizations.of(context)?.showLess ?? '';
+
 String getShowMore(BuildContext context) =>
     AppLocalizations.of(context)?.showMore ?? '';
+
+String getSeewhatshappeningintheeSportsworldrightnow(BuildContext context) =>
+    AppLocalizations.of(context)?.seeWhatsHappeningInTheEsportsWorldRightNow ??
+    '';
+String getCreateAccount(BuildContext context) =>
+    AppLocalizations.of(context)?.createAccount ?? '';
+
+String getHaveanaccountalready(BuildContext context) =>
+    AppLocalizations.of(context)?.haveanaccountalready ?? '';
+String getBysigningupyouagreetoour(BuildContext context) =>
+    AppLocalizations.of(context)?.bysigningupyouagreetoour ?? '';
+String getTermsofService(BuildContext context) =>
+    AppLocalizations.of(context)?.termsofService ?? '';
+String getPrivacyPolicy(BuildContext context) =>
+    AppLocalizations.of(context)?.privacyPolicy ?? '';
+String getand(BuildContext context) => AppLocalizations.of(context)?.and ?? '';
+String getCookieUse(BuildContext context) =>
+    AppLocalizations.of(context)?.cookieUse ?? '';
+String getLogout(BuildContext context) =>
+    AppLocalizations.of(context)?.logout ?? '';
+String getIncorrectpassword(BuildContext context) =>
+    AppLocalizations.of(context)?.incorrectpassword ?? '';
+String getEnteryourpassword(BuildContext context) =>
+    AppLocalizations.of(context)?.enteryourpassword ?? '';
+String getPassword(BuildContext context) =>
+    AppLocalizations.of(context)?.password ?? '';
+String getForgotpassword(BuildContext context) =>
+    AppLocalizations.of(context)?.forgotpassword ?? '';
+String getNext(BuildContext context) =>
+    AppLocalizations.of(context)?.next ?? '';
+String getEmaildoesnotexistPleasesignup(BuildContext context) =>
+    AppLocalizations.of(context)?.emaildoesnotexistPleasesignup ?? '';
+String getEmailisrequired(BuildContext context) =>
+    AppLocalizations.of(context)?.emailisrequired ?? '';
+String getPleaseenteravalidemailaddress(BuildContext context) =>
+    AppLocalizations.of(context)?.pleaseenteravalidemailaddres ?? '';
+String getEmail(BuildContext context) =>
+    AppLocalizations.of(context)?.email ?? '';
+String getTogetstartedfirstenteryouremail(BuildContext context) =>
+    AppLocalizations.of(context)?.togetstartedfirstenteryouremail ?? '';
+String getHome(BuildContext context) =>
+    AppLocalizations.of(context)?.home ?? '';
+String getTournaments(BuildContext context) =>
+    AppLocalizations.of(context)?.tournaments ?? '';

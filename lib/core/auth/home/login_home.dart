@@ -1,6 +1,7 @@
 import 'package:everesports/core/auth/sign_in/sign_in.dart';
 import 'package:everesports/core/auth/sign_up/sign_up.dart';
 import 'package:everesports/core/auth/widget/common_text_button_login.dart';
+import 'package:everesports/language/controller/all_language.dart';
 
 import 'package:everesports/responsive/responsive.dart';
 import 'package:everesports/view/pages/terms_of_service.dart';
@@ -117,7 +118,7 @@ class _LoginHomePageState extends State<LoginHomePage> {
           Padding(
             padding: const EdgeInsets.all(10),
             child: Text(
-              "See what's happening in the eSports world right now.",
+              getSeewhatshappeningintheeSportsworldrightnow(context),
               style: TextStyle(
                 fontFamily: "Poppins",
                 fontWeight: FontWeight.w800,
@@ -136,9 +137,13 @@ class _LoginHomePageState extends State<LoginHomePage> {
           SizedBox(
             width: double.infinity,
             height: isMobile ? 80 : 80,
-            child: commonElevatedButtonbuild(context, "Create Account", () {
-              commonNavigationbuild(context, SignUpFireBase());
-            }),
+            child: commonElevatedButtonbuild(
+              context,
+              getCreateAccount(context),
+              () {
+                commonNavigationbuild(context, SignUpFireBase());
+              },
+            ),
           ),
           SizedBox(height: isMobile ? 20 : 32),
           _buildFooterText(),
@@ -155,18 +160,28 @@ class _LoginHomePageState extends State<LoginHomePage> {
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text("By signing up, you agree to our"),
-              commonTextButtonLoginbuild(context, " Terms of Service", () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => TermsOfServicePage()),
-                );
-              }),
+              Text(getBysigningupyouagreetoour(context)),
+              commonTextButtonLoginbuild(
+                context,
+                getTermsofService(context),
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TermsOfServicePage(),
+                    ),
+                  );
+                },
+              ),
               Text(","),
-              commonTextButtonLoginbuild(context, " Privacy Policy", () {}),
+              commonTextButtonLoginbuild(
+                context,
+                getPrivacyPolicy(context),
+                () {},
+              ),
               Text(","),
-              Text(" and"),
-              commonTextButtonLoginbuild(context, " Cookie Use", () {}),
+              Text(getand(context)),
+              commonTextButtonLoginbuild(context, getCookieUse(context), () {}),
             ],
           ),
           SizedBox(height: 10),
@@ -174,8 +189,8 @@ class _LoginHomePageState extends State<LoginHomePage> {
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text("Have an account already?"),
-              commonTextButtonLoginbuild(context, "Log in", () {
+              Text(getHaveanaccountalready(context)),
+              commonTextButtonLoginbuild(context, getLogin(context), () {
                 commonNavigationbuild(context, SignInFireBase());
               }),
             ],

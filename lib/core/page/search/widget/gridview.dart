@@ -90,7 +90,7 @@ class _EsportsGridViewSearchState extends State<EsportsGridViewSearch> {
                         : SingalTournamentPopUp.showSingalTournamentPopUp(
                             context,
                             title: item.title,
-                            content: item.description,
+
                             item: item,
                             imagePath: imagePath ?? '',
                             selectedWeapons: item.selectedWeapons,
@@ -147,7 +147,7 @@ class _EsportsGridViewSearchState extends State<EsportsGridViewSearch> {
                                     : SingalTournamentPopUp.showSingalTournamentPopUp(
                                         context,
                                         title: item.title,
-                                        content: item.description,
+
                                         item: item,
                                         imagePath: imagePath ?? '',
                                         selectedWeapons: item.selectedWeapons,

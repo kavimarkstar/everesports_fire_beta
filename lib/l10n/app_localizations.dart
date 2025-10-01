@@ -700,6 +700,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show more'**
   String get showMore;
+
+  /// No description provided for @seeWhatsHappeningInTheEsportsWorldRightNow.
+  ///
+  /// In en, this message translates to:
+  /// **'See what\'s happening in the eSports world right now'**
+  String get seeWhatsHappeningInTheEsportsWorldRightNow;
+
+  /// No description provided for @createAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get createAccount;
+
+  /// No description provided for @haveanaccountalready.
+  ///
+  /// In en, this message translates to:
+  /// **'Have an account already?'**
+  String get haveanaccountalready;
+
+  /// No description provided for @bysigningupyouagreetoour.
+  ///
+  /// In en, this message translates to:
+  /// **'By signing up, you agree to our'**
+  String get bysigningupyouagreetoour;
+
+  /// No description provided for @termsofService.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of Service'**
+  String get termsofService;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of Service'**
+  String get privacyPolicy;
+
+  /// No description provided for @and.
+  ///
+  /// In en, this message translates to:
+  /// **' and'**
+  String get and;
+
+  /// No description provided for @cookieUse.
+  ///
+  /// In en, this message translates to:
+  /// **' Cookie Use'**
+  String get cookieUse;
+
+  /// No description provided for @logout.
+  ///
+  /// In en, this message translates to:
+  /// **'Logout'**
+  String get logout;
+
+  /// No description provided for @incorrectpassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect password.'**
+  String get incorrectpassword;
+
+  /// No description provided for @enteryourpassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password.'**
+  String get enteryourpassword;
+
+  /// No description provided for @password.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get password;
+
+  /// No description provided for @forgotpassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password'**
+  String get forgotpassword;
+
+  /// No description provided for @next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get next;
+
+  /// No description provided for @emaildoesnotexistPleasesignup.
+  ///
+  /// In en, this message translates to:
+  /// **'Email does not exist. Please sign up.'**
+  String get emaildoesnotexistPleasesignup;
+
+  /// No description provided for @emailisrequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is required'**
+  String get emailisrequired;
+
+  /// No description provided for @pleaseenteravalidemailaddres.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get pleaseenteravalidemailaddres;
+
+  /// No description provided for @email.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get email;
+
+  /// No description provided for @togetstartedfirstenteryouremail.
+  ///
+  /// In en, this message translates to:
+  /// **'To get started, first enter your email'**
+  String get togetstartedfirstenteryouremail;
+
+  /// No description provided for @home.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get home;
+
+  /// No description provided for @tournaments.
+  ///
+  /// In en, this message translates to:
+  /// **'Tournaments'**
+  String get tournaments;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

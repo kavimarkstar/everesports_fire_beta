@@ -318,4 +318,67 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get showMore => 'Show more';
+
+  @override
+  String get seeWhatsHappeningInTheEsportsWorldRightNow => 'See what\'s happening in the eSports world right now';
+
+  @override
+  String get createAccount => 'Create Account';
+
+  @override
+  String get haveanaccountalready => 'Have an account already?';
+
+  @override
+  String get bysigningupyouagreetoour => 'By signing up, you agree to our';
+
+  @override
+  String get termsofService => 'Terms of Service';
+
+  @override
+  String get privacyPolicy => 'Terms of Service';
+
+  @override
+  String get and => ' and';
+
+  @override
+  String get cookieUse => ' Cookie Use';
+
+  @override
+  String get logout => 'Logout';
+
+  @override
+  String get incorrectpassword => 'Incorrect password.';
+
+  @override
+  String get enteryourpassword => 'Enter your password.';
+
+  @override
+  String get password => 'Password';
+
+  @override
+  String get forgotpassword => 'Forgot password';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get emaildoesnotexistPleasesignup => 'Email does not exist. Please sign up.';
+
+  @override
+  String get emailisrequired => 'Email is required';
+
+  @override
+  String get pleaseenteravalidemailaddres => 'Please enter a valid email address';
+
+  @override
+  String get email => 'Email';
+
+  @override
+  String get togetstartedfirstenteryouremail => 'To get started, first enter your email';
+
+  @override
+  String get home => 'Home';
+
+  @override
+  String get tournaments => 'Tournaments';
 }

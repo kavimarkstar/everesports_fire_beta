@@ -47,6 +47,7 @@ class _HomePageState extends State<HomePage> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('userId');
+      if (!mounted) return;
       setState(() {
         _currentUserId = userId;
       });
@@ -89,6 +90,7 @@ class _HomePageState extends State<HomePage> {
     if (_currentUserId == null) return;
 
     try {
+      if (!mounted) return;
       setState(() {
         _isLoadingUsers = true;
         _hasError = false;
@@ -104,6 +106,7 @@ class _HomePageState extends State<HomePage> {
       await UsersService.getFollowingCount(_currentUserId!);
       await UsersService.getFollowersCount(_currentUserId!);
 
+      if (!mounted) return;
       setState(() {
         _usersWithStatus = usersWithStatus;
         _filteredUsersWithStatus = usersWithStatus;
@@ -114,6 +117,7 @@ class _HomePageState extends State<HomePage> {
       if (kDebugMode) {
         print('Error loading users: $e');
       }
+      if (!mounted) return;
       setState(() {
         _isLoadingUsers = false;
         _hasError = true;

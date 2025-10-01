@@ -100,5 +100,27 @@
   "newAlbumName": "නව ඇල්බමයේ නම",
   "createAlbum": "ඇල්බමයක් සාදන්න",
   "showLess": "අඩු පෙන්වන්න",
-  "showMore": "තවත් පෙන්වන්න"
+  "showMore": "තවත් පෙන්වන්න",
+  "seeWhatsHappeningInTheEsportsWorldRightNow": "eSports ලෝකයේ දැන් මොකද වෙන්නේ කියලා බලන්න.",
+  "createAccount": "ගිණුම තනන්න",
+  "haveanaccountalready": "දැනටමත් ගිණුමක් තිබේද?",
+  "bysigningupyouagreetoour": "ලියාපදිංචි වීමෙන්, ඔබ අපගේ",
+  "termsofService": "සේවා කොන්දේසි",
+  "privacyPolicy": "රහස්යතා ප්රතිපත්තිය",
+  "and": " සහ",
+  "cookieUse": " කුකී භාවිතය",
+  "logout": "පිටවීම",
+  "incorrectpassword": "වැරදි මුරපදයකි.",
+  "enteryourpassword": "ඔබගේ මුරපදය ඇතුළත් කරන්න",
+  "password": "මුරපදය",
+  "forgotpassword": "මුරපදය අමතක වුණා ද",
+  "next": "ඊළඟ",
+  "emaildoesnotexistPleasesignup": "විද්‍යුත් තැපෑලක් නොමැත. කරුණාකර ලියාපදිංචි වන්න.",
+  "emailisrequired": "විද්‍යුත් තැපෑල අවශ්‍යයි",
+  "pleaseenteravalidemailaddres": "කරණාකර වලංගු ඊතැපැල් ලිපිනයක් ඇතුළු කරන්න",
+  "email": "විද්යුත් තැපෑල",
+  "togetstartedfirstenteryouremail": "ආරම්භ කිරීමට, පළමුව ඔබගේ විද්‍යුත් තැපෑල ඇතුළත් කරන්න.",
+  "home": "මුල් පිටුව",
+  "tournaments": "තරඟාවලි"
+
 }

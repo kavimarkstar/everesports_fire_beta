@@ -87,7 +87,7 @@ class _NotificationPageState extends State<NotificationPage> {
       appBar: AppBar(
         actions: [
           SizedBox(
-            width: 400,
+            width: isMobile(context) ? MediaQuery.of(context).size.width : 400,
             height: 100,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -96,8 +96,7 @@ class _NotificationPageState extends State<NotificationPage> {
                   decoration: InputDecoration(
                     filled: true,
                     fillColor: isDark ? Color(0xFF272727) : Color(0xFFf1f1f1),
-
-                    hintText: 'Search notifications',
+                    hintText: 'Search',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(200),
                       borderSide: BorderSide.none,

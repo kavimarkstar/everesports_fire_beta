@@ -1,6 +1,7 @@
 import 'package:everesports/Theme/colors.dart';
 import 'package:everesports/core/auth/services/auth_service.dart';
 import 'package:everesports/core/auth/sign_up/page/create_pass.dart';
+import 'package:everesports/language/controller/all_language.dart';
 import 'package:everesports/widget/common_elevated_button.dart';
 import 'package:everesports/widget/common_navigation.dart';
 import 'package:everesports/widget/common_snackbar.dart';
@@ -133,7 +134,7 @@ class _SignUpFireBaseState extends State<SignUpFireBase> {
   }
 
   String? emailValidator(String email) {
-    if (email.isEmpty) return 'Email is required';
+    if (email.isEmpty) return getEmailisrequired(context);
 
     final pattern = r'^[\w\.-]+@(?:gmail\.com|outlook\.com)$';
     final regExp = RegExp(pattern);
@@ -211,8 +212,9 @@ class _SignUpFireBaseState extends State<SignUpFireBase> {
                       children: [
                         commonTextfieldEmailbuild(
                           context,
-                          "Email",
-                          "Phone, Email, or Username",
+                          getEmail(context),
+                          getEmail(context),
+
                           _emailController,
                         ),
                         if (_emailExists)
@@ -256,7 +258,7 @@ class _SignUpFireBaseState extends State<SignUpFireBase> {
                           height: 80,
                           child: commonElevatedButtonbuild(
                             context,
-                            "Next",
+                            getNext(context),
                             _isInputValid && !_isLoading ? _handleNext : null,
                           ),
                         ),

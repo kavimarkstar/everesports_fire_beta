@@ -9,7 +9,6 @@ import 'package:everesports/Theme/theme_provider.dart';
 import 'package:everesports/l10n/app_localizations.dart';
 import 'package:everesports/navigation/navigation.dart';
 import 'package:everesports/service/language_service.dart';
-import 'package:everesports/service/notification_service.dart';
 
 // 🔑 Global key to access app state
 final GlobalKey<_EverEsportsState> appKey = GlobalKey<_EverEsportsState>();
@@ -17,15 +16,6 @@ final GlobalKey<_EverEsportsState> appKey = GlobalKey<_EverEsportsState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  try {
-    // Initialize essential services
-    await LanguageService().initialize();
-
-    await NotificationService().initialize();
-  } catch (e) {
-    debugPrint('Initialization error: $e');
-  }
 
   runApp(
     MultiProvider(
@@ -72,7 +62,7 @@ class _EverEsportsState extends State<EverEsports> {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          home: const NavigationPage(),
+          home: NavigationPage(),
         );
       },
     );
